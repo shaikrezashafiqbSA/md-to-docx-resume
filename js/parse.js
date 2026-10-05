@@ -71,7 +71,8 @@
 
   function Parser() {
     this.header = { name: '', contactText: '', contactLinks: [],
-                    headline: '', subline: '' };
+                    headline: '', subline: '', lines: {} };
+    this.ln = 0;              // source line being parsed, stamped onto blocks
     this.sections = [];
     this.current = null;
     this.table = null;
@@ -88,6 +89,7 @@
       this.current = { name: '', blocks: [] };
       this.sections.push(this.current);
     }
+    if (block.line === undefined) block.line = this.ln;
     this.current.blocks.push(block);
     if (block.t !== 'role') this.pendingRole = null;
   };
@@ -105,7 +107,7 @@
         return;
       }
     }
-    this.current = { name: name, blocks: [] };
+    this.current = { name: name, blocks: [], line: this.ln };
     this.sections.push(this.current);
   };
 
@@ -114,7 +116,8 @@
     for (var i = 0; i < this.table.length; i++) {
       var label = stripEmph(this.table[i][0]);
       var text = this.table[i][1] || '';
-      if (label || text) this.push({ t: 'skill', label: label, text: text });
+      if (label || text) this.push({ t: 'skill', label: label, text: text,
+                                     line: this.table[i].line });
     }
     this.table = null;
   };
@@ -142,6 +145,7 @@
       m = FULLBOLD_RE.exec(line) || ATX_RE.exec(line);
       if (!m) return false;
       this.header.name = stripEmph(m[m.length - 1]).trim();
+      this.header.lines.name = this.ln;
       this.stage = 1;
       return true;
     }
@@ -152,6 +156,7 @@
         links.push({ label: lm[1].trim(), url: lm[2] });
       }
       this.header.contactLinks = links;
+      this.header.lines.contact = this.ln;
       this.header.contactText = line.replace(LINK_RE, '')
         .replace(/(\s*\|\s*){2,}/g, '  |  ')
         .replace(/(\s*\|\s*)+$/, '')
@@ -164,6 +169,7 @@
       m = FULLBOLD_RE.exec(line);
       if (m && !isSectionHeading(m[1])) {
         this.header.headline = m[1].trim();
+        this.header.lines.headline = this.ln;
         this.stage = 3;
         return true;
       }
@@ -173,6 +179,7 @@
     if (this.stage === 3) {
       if (!/^[#*|]/.test(line)) {
         this.header.subline = line;
+        this.header.lines.subline = this.ln;
         this.stage = 4;
         return true;
       }
@@ -185,6 +192,7 @@
   Parser.prototype.parse = function (md) {
     var lines = md.split(/\r?\n/);
     for (var i = 0; i < lines.length; i++) {
+      this.ln = i;
       var line = unescapeMd(lines[i].trim());
       if (!line) { this.flushTable(); continue; }
       if (HRULE_RE.test(line)) { this.flushTable(); continue; }
@@ -195,7 +203,9 @@
           .map(function (c) { return c.trim(); });
         if (!cells.some(Boolean)) continue;
         if (this.table === null) this.table = [];
-        this.table.push(cells.length >= 2 ? cells.slice(0, 2) : [cells[0], '']);
+        var row = cells.length >= 2 ? cells.slice(0, 2) : [cells[0], ''];
+        row.line = i;
+        this.table.push(row);
         continue;
       }
       this.flushTable();
@@ -287,6 +297,7 @@
       var last = blocks && blocks.length ? blocks[blocks.length - 1] : null;
       if (this.inEducation && last && last.t === 'edu' && !last.note) {
         last.note = line;
+        last.noteLine = this.ln;
         continue;
       }
 

@@ -124,6 +124,50 @@
   .r-bullet strong { color: var(--ink); }
   #sheet a { color: var(--link); }
 
+  /* The block the editor caret is in: tinted, outlined, with an arrow in the margin. */
+  #sheet .hl { position: relative; background: #fff4c2 !important;
+               outline: 2px solid #f2b705; outline-offset: 1px; border-radius: 2px; }
+  #sheet .hl::after { content: "\25B6"; position: absolute; left: -0.5in;
+                      top: 50%; transform: translateY(-50%); font-size: 11px;
+                      color: #d99a00; }
+
+  /* ----------------------------------------------------------- toolbar */
+  body { display: flex; flex-direction: column; }
+  .layout { flex: 1 1 auto; min-height: 0; height: auto; padding-top: 0; }
+  .toolbar { flex: none; display: flex; align-items: stretch; gap: 14px;
+             margin: 18px 18px 14px; padding: 8px 12px; overflow-x: auto;
+             background: var(--panel); border: 1px solid var(--line);
+             border-radius: 8px; }
+  .tb-group { display: flex; flex-direction: column; gap: 4px; flex: none; }
+  .tb-group + .tb-group { border-left: 1px solid var(--line); padding-left: 14px; }
+  .tb-label { font-size: 10px; font-weight: 600; text-transform: uppercase;
+              letter-spacing: .08em; color: #8a93a0; }
+  .tb-btns { display: flex; gap: 5px; flex-wrap: nowrap; }
+  .tb-btns button { display: flex; flex-direction: column; align-items: flex-start;
+                    gap: 2px; padding: 5px 9px; min-width: 64px; text-align: left;
+                    font-family: var(--body-font); white-space: nowrap; }
+  .tb-btns button:hover { border-color: var(--teal); background: #f2f9fb; }
+  .tb-btns button small { font-family: var(--ui-font); font-size: 10px; color: #8a93a0; }
+  /* Each button is typeset the way its output looks in the document. */
+  .s-name    { font-size: 15pt; font-weight: 700; color: var(--teal); line-height: 1.1; }
+  .s-head    { font-size: 10.5pt; font-weight: 700; color: var(--teal); }
+  .s-line    { font-size: 9.5pt; font-style: italic; color: var(--bronze);
+               border-bottom: 1.5px solid var(--bronze); padding-bottom: 1px; }
+  .s-section { font-size: 10pt; font-weight: 700; text-transform: uppercase; color: var(--teal);
+               border-left: 3px solid var(--bronze); border-bottom: 1px solid var(--teal);
+               padding-left: 5px; }
+  .s-role    { font-size: 10.5pt; font-weight: 700; color: var(--teal); }
+  .s-emp     { font-size: 10pt; font-weight: 700; color: var(--bronze); }
+  .s-ital    { font-size: 9.5pt; font-style: italic; color: var(--grey); }
+  .s-sub     { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; color: var(--bronze);
+               border-left: 2px solid var(--bronze); padding-left: 4px; }
+  .s-call    { font-size: 9.5pt; font-style: italic; color: var(--teal);
+               border-left: 2.5px solid var(--teal); padding-left: 5px; }
+  .s-skill   { font-size: 9pt; background: var(--band); border-left: 2.5px solid var(--bronze);
+               padding: 0 4px 0 5px; }
+  .s-link    { font-size: 10pt; color: var(--link); text-decoration: underline; }
+  .s-bullet  { font-size: 10pt; }
+
   /* Below this width the three columns stop being readable, so the page
      becomes an ordinary scrolling document instead. */
   @media (max-width: 1100px) {
@@ -137,6 +181,58 @@
 </style>
 </head>
 <body>
+
+<div class="toolbar" id="toolbar" role="toolbar" aria-label="Insert resume features">
+  <div class="tb-group">
+    <span class="tb-label">Header (top of page)</span>
+    <div class="tb-btns">
+      <button data-ins="header" title="Name in large teal type, contact line with clickable links, bold headline, and a tagline underlined with a bronze rule. Goes at the very top.">
+        <span class="s-name">Name</span><small>big font + contact</small></button>
+      <button data-ins="header" title="Same header block. The tagline is the italic bronze line with a rule beneath it.">
+        <span class="s-line">Tagline rule</span><small>line under header</small></button>
+      <button data-ins="header" title="Bold teal headline under the contact line.">
+        <span class="s-head">Headline</span><small>bold teal</small></button>
+    </div>
+  </div>
+  <div class="tb-group">
+    <span class="tb-label">Structure</span>
+    <div class="tb-btns">
+      <button data-ins="section" title="Uppercase teal heading with a thick bronze bar on the left and a thin teal line underneath.">
+        <span class="s-section">Section</span><small>bar + line</small></button>
+      <button data-ins="role" title="Job: teal title, then employer (bronze, bold) and dates on one pipe-separated line.">
+        <span class="s-role">Role</span><small>title | employer</small></button>
+      <button data-ins="dates" title="Short italic line right after a role: becomes that job's dates.">
+        <span class="s-ital">Dates</span><small>after a role</small></button>
+      <button data-ins="scope" title="Longer italic grey line: a scope note under a role.">
+        <span class="s-ital">Scope note</span><small>italic grey</small></button>
+      <button data-ins="subhead" title="Small uppercase bronze sub-heading with its own thin bar.">
+        <span class="s-sub">Sub-heading</span><small>bronze bar</small></button>
+    </div>
+  </div>
+  <div class="tb-group">
+    <span class="tb-label">Content</span>
+    <div class="tb-btns">
+      <button data-ins="bullet" title="Bullet point.">
+        <span class="s-bullet">&bull; Bullet</span><small>plain</small></button>
+      <button data-ins="lbullet" title="Bullet with a bold label in front.">
+        <span class="s-bullet">&bull; <b>Label:</b> text</span><small>labelled bullet</small></button>
+      <button data-ins="callout" title="Italic teal quote with a teal bar on the left. Triggered by starting with 'Guiding Principle'.">
+        <span class="s-call">Callout</span><small>teal bar</small></button>
+      <button data-ins="skills" title="Skills as tinted cards with a bronze edge. Use a two-column table; place under a heading containing 'Skills'.">
+        <span class="s-skill"><b style="color:var(--teal)">Skills</b> card</span><small>tinted rows</small></button>
+      <button data-ins="edu" title="Qualification line: bold teal degree, school and year. Put it under an EDUCATION heading.">
+        <span class="s-role">Education</span><small>degree | school</small></button>
+    </div>
+  </div>
+  <div class="tb-group">
+    <span class="tb-label">Text (wraps selection)</span>
+    <div class="tb-btns">
+      <button data-wrap="**" title="Bold (Ctrl+B)"><b>Bold</b><small>Ctrl+B</small></button>
+      <button data-wrap="*" title="Italic (Ctrl+I)"><i>Italic</i><small>Ctrl+I</small></button>
+      <button data-ins="link" title="Hyperlink: turns the selection into [text](url). Works anywhere, and in the contact line becomes a clickable link in Word (Ctrl+K)."><span class="s-link">Hyperlink</span><small>Ctrl+K</small></button>
+    </div>
+  </div>
+</div>
 
 <div class="layout">
   <div class="panel">
@@ -178,7 +274,7 @@
   </div>
 
   <div class="col stage-col">
-    <div class="col-head"><span>Preview</span><span class="note">A4, live</span></div>
+    <div class="col-head"><span>Preview</span><span class="note">A4, live. The highlight follows your cursor</span></div>
     <div class="stage">
       <div class="scaler" id="scaler">
         <div class="sheet-wrap" id="wrap">

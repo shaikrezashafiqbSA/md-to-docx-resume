@@ -8,10 +8,11 @@
 (function () {
   'use strict';
 
-  var SAMPLE = 'content/Shaik_Reza_Shafiq_Resume.md';
+  var SAMPLE = 'content/mock-resume.md';
   var STORE = 'resume-render.v2';
   var DEBOUNCE_MS = 180;
   var BASE_NAME = 'Shaik_Reza_Shafiq_Resume';
+  var HL_CLASS = 'hl';
 
   var el = {
     editor:   document.getElementById('editor'),
@@ -114,12 +115,14 @@
 
   var skillTick = 0;
 
+  function dl(n) { return n === undefined ? '' : ' data-line="' + n + '"'; }
+
   function blockHtml(b) {
     switch (b.t) {
       case 'role': {
-        var h = '<p class="r-role">' + esc(b.role) + '</p>';
+        var h = '<p class="r-role"' + dl(b.line) + '>' + esc(b.role) + '</p>';
         if (b.org || b.dates) {
-          h += '<p class="r-org">';
+          h += '<p class="r-org"' + dl(b.line) + '>';
           if (b.org) h += '<span class="r-emp">' + inlineHtml(b.org) + '</span>';
           if (b.dates) h += '<span class="r-dates">' + (b.org ? '&nbsp;&nbsp;|&nbsp;&nbsp;' : '') + esc(b.dates) + '</span>';
           h += '</p>';
@@ -127,14 +130,14 @@
         return h;
       }
       case 'context':
-        return '<p class="r-context">' + inlineHtml(b.text) + '</p>';
+        return '<p class="r-context"' + dl(b.line) + '>' + inlineHtml(b.text) + '</p>';
       case 'subhead':
-        return '<p class="r-subhead">' + esc(b.text) + '</p>';
+        return '<p class="r-subhead"' + dl(b.line) + '>' + esc(b.text) + '</p>';
       case 'callout':
-        return '<p class="r-callout">' + inlineHtml(b.text) + '</p>';
+        return '<p class="r-callout"' + dl(b.line) + '>' + inlineHtml(b.text) + '</p>';
       case 'skill': {
         var alt = (skillTick++ % 2 === 1) ? ' alt' : '';
-        return '<p class="r-skill' + alt + '">' +
+        return '<p class="r-skill' + alt + '"' + dl(b.line) + '>' +
                (b.label ? '<span class="r-skill-label">' + esc(b.label) + '</span>&nbsp;&nbsp;&nbsp;' : '') +
                inlineHtml(b.text) + '</p>';
       }
@@ -142,41 +145,44 @@
         var tail = [];
         if (b.school) tail.push(esc(b.school));
         if (b.year) tail.push(esc(b.year));
-        var e = '<p class="r-edu"><span class="r-deg">' + esc(b.degree) + '</span>' +
+        var e = '<p class="r-edu"' + dl(b.line) + '><span class="r-deg">' + esc(b.degree) + '</span>' +
                 (tail.length ? '<span class="r-edu-meta">&nbsp;&nbsp;|&nbsp;&nbsp;' +
                   tail.join('&nbsp;&nbsp;|&nbsp;&nbsp;') + '</span>' : '') + '</p>';
-        if (b.note) e += '<p class="r-note">' + inlineHtml(b.note) + '</p>';
+        if (b.note) e += '<p class="r-note"' + dl(b.noteLine) + '>' + inlineHtml(b.note) + '</p>';
         return e;
       }
       case 'bullet':
-        return '<p class="r-bullet">' +
+        return '<p class="r-bullet"' + dl(b.line) + '>' +
                (b.label ? '<strong>' + esc(b.label) + ': </strong>' : '') +
                inlineHtml(b.text) + '</p>';
       default:
-        return '<p class="r-para">' + inlineHtml(b.text) + '</p>';
+        return '<p class="r-para"' + dl(b.line) + '>' + inlineHtml(b.text) + '</p>';
     }
   }
 
   function renderPreview() {
     var h = model.header, out = '';
-    if (h.name) out += '<p class="r-name">' + esc(h.name) + '</p>';
+    var hl = h.lines || {};
+    if (h.name) out += '<p class="r-name"' + dl(hl.name) + '>' + esc(h.name) + '</p>';
 
     var contact = h.contactText ? inlineHtml(h.contactText) : '';
     (h.contactLinks || []).forEach(function (l) {
       if (contact) contact += '&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;';
       contact += '<a href="' + esc(l.url) + '">' + esc(l.label) + '</a>';
     });
-    if (contact) out += '<p class="r-contact">' + contact + '</p>';
-    if (h.headline) out += '<p class="r-headline">' + inlineHtml(h.headline) + '</p>';
-    if (h.subline) out += '<p class="r-subline">' + inlineHtml(h.subline) + '</p>';
+    if (contact) out += '<p class="r-contact"' + dl(hl.contact) + '>' + contact + '</p>';
+    if (h.headline) out += '<p class="r-headline"' + dl(hl.headline) + '>' + inlineHtml(h.headline) + '</p>';
+    if (h.subline) out += '<p class="r-subline"' + dl(hl.subline) + '>' + inlineHtml(h.subline) + '</p>';
 
     skillTick = 0;
     model.sections.forEach(function (s) {
-      if (s.name) out += '<p class="r-section">' + esc(s.name) + '</p>';
+      if (s.name) out += '<p class="r-section"' + dl(s.line) + '>' + esc(s.name) + '</p>';
       s.blocks.forEach(function (b) { out += blockHtml(b); });
     });
 
     el.sheet.innerHTML = out;
+    hlEl = null;
+    syncHighlight(false);
     measurePages();
     fitPreview();
   }
@@ -218,6 +224,37 @@
       el.rules.appendChild(line);
     }
     el.pages.textContent = count + (count === 1 ? ' page' : ' pages') + ' (estimated)';
+  }
+
+  /* ------------------------------------------------------------ highlight
+   * Every preview element carries the source line it came from. The element
+   * under the editor caret is the last one starting at or before that line. */
+
+  var hlEl = null;
+
+  function caretLine() {
+    var v = el.editor.value, pos = el.editor.selectionStart, n = 0;
+    for (var i = v.indexOf('\n'); i !== -1 && i < pos; i = v.indexOf('\n', i + 1)) n++;
+    return n;
+  }
+
+  function syncHighlight(scroll) {
+    var line = caretLine(), best = null, bestLine = -1;
+    var nodes = el.sheet.querySelectorAll('[data-line]');
+    for (var i = 0; i < nodes.length; i++) {
+      var n = +nodes[i].getAttribute('data-line');
+      if (n <= line && n >= bestLine) { best = nodes[i]; bestLine = n; }
+    }
+    if (best === hlEl) return;
+    if (hlEl) hlEl.classList.remove(HL_CLASS);
+    hlEl = best;
+    if (!hlEl) return;
+    hlEl.classList.add(HL_CLASS);
+    if (!scroll) return;
+    var r = hlEl.getBoundingClientRect(), s = el.stage.getBoundingClientRect();
+    if (r.top < s.top + 12 || r.bottom > s.bottom - 12) {
+      el.stage.scrollTop += r.top - s.top - s.height / 3;
+    }
   }
 
   /* --------------------------------------------------------------- render */
@@ -288,6 +325,9 @@
   /* ----------------------------------------------------------------- wire */
 
   el.editor.addEventListener('input', scheduleReparse);
+  document.addEventListener('selectionchange', function () {
+    if (document.activeElement === el.editor && model) syncHighlight(true);
+  });
 
   /* Tab indents instead of leaving the editor, which matters when the whole
    * document is written here rather than pasted in. */
@@ -331,6 +371,86 @@
     if (e.dataTransfer.files && e.dataTransfer.files.length) {
       readFile(e.dataTransfer.files[0]);
     }
+  });
+
+  /* ------------------------------------------------------------- toolbar
+   * Each button drops Markdown for one feature into the editor. {{...}} marks
+   * the placeholder that ends up selected, ready to be typed over. */
+
+  var SNIPPETS = {
+    header: '# {{YOUR NAME}}\nCity | +00 0000 0000 | email@example.com | [LinkedIn](https://linkedin.com/in/you)\n**Headline | Key Strength | Key Strength**\nOne-line tagline shown in italic with a rule beneath',
+    section: '## {{SECTION TITLE}}',
+    role: '### {{Job Title}} | Employer\n*Jan 2024 - Present*',
+    dates: '*{{Jan 2024 - Present}}*',
+    scope: '*{{One sentence on the scope or context of this role.}}*',
+    subhead: '#### {{Sub-heading}}',
+    bullet: '* {{Achievement or responsibility}}',
+    lbullet: '* **{{Label:}}** Describe the result here',
+    callout: '***Guiding Principle: {{your principle}}***',
+    skills: '| {{Category}} | skill one, skill two, skill three |\n| --- | --- |\n| Category | skill one, skill two |',
+    edu: '**{{Degree}}** - School *2024*\nOptional coursework or honours note'
+  };
+
+  function pick(snippet) {
+    var i = snippet.indexOf('{{'), j = snippet.indexOf('}}');
+    if (i < 0 || j < i) return { text: snippet, from: snippet.length, to: snippet.length };
+    var text = snippet.slice(0, i) + snippet.slice(i + 2, j) + snippet.slice(j + 2);
+    return { text: text, from: i, to: j - 2 };
+  }
+
+  function insertBlock(name) {
+    var ed = el.editor, v = ed.value, p = pick(SNIPPETS[name]), at, pre, post;
+    if (name === 'header') {
+      at = 0; pre = ''; post = v.trim() ? '\n\n' : '';
+    } else if (name === 'dates') {
+      at = v.indexOf('\n', ed.selectionEnd); at = at < 0 ? v.length : at;
+      pre = '\n'; post = '';
+    } else {
+      at = v.indexOf('\n', ed.selectionEnd); at = at < 0 ? v.length : at;
+      pre = v.trim() ? '\n\n' : ''; post = '';
+    }
+    ed.value = v.slice(0, at) + pre + p.text + post + v.slice(at);
+    ed.focus();
+    ed.setSelectionRange(at + pre.length + p.from, at + pre.length + p.to);
+    var line = ed.value.slice(0, ed.selectionStart).split('\n').length - 1;
+    ed.scrollTop = Math.max(0, line * 19 - ed.clientHeight / 2);
+    scheduleReparse();
+  }
+
+  function wrapSelection(mark) {
+    var ed = el.editor, s = ed.selectionStart, e = ed.selectionEnd;
+    var sel = ed.value.slice(s, e) || 'text';
+    ed.value = ed.value.slice(0, s) + mark + sel + mark + ed.value.slice(e);
+    ed.focus();
+    ed.setSelectionRange(s + mark.length, s + mark.length + sel.length);
+    scheduleReparse();
+  }
+
+  function insertLink() {
+    var ed = el.editor, s = ed.selectionStart, e = ed.selectionEnd;
+    var sel = ed.value.slice(s, e) || 'link text';
+    var url = 'https://';
+    ed.value = ed.value.slice(0, s) + '[' + sel + '](' + url + ')' + ed.value.slice(e);
+    ed.focus();
+    var u = s + sel.length + 3;
+    ed.setSelectionRange(u, u + url.length);
+    scheduleReparse();
+  }
+
+  document.getElementById('toolbar').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.wrap) wrapSelection(b.dataset.wrap);
+    else if (b.dataset.ins === 'link') insertLink();
+    else if (b.dataset.ins) insertBlock(b.dataset.ins);
+  });
+
+  el.editor.addEventListener('keydown', function (e) {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    var k = e.key.toLowerCase();
+    if (k === 'b') { e.preventDefault(); wrapSelection('**'); }
+    else if (k === 'i') { e.preventDefault(); wrapSelection('*'); }
+    else if (k === 'k') { e.preventDefault(); insertLink(); }
   });
 
   el.sample.addEventListener('click', loadSample);

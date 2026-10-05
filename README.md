@@ -18,6 +18,8 @@ rebuilds as you go, from the same model that packages the `.docx`.
    with no role. Clear the box to hand naming back to the role.
 4. Press **Download .docx** and drag the result back into Drive.
 
+The toolbar along the top inserts each feature (header, section, role, bullets, skills cards, links) at the cursor. Clicking or moving the cursor in the editor highlights the matching block in the preview, with an arrow in the margin. A fresh visit opens with `content/mock-resume.md`.
+
 Your draft, role and file name are kept in this browser's local storage, so a
 reload picks up where you left off. **Sample** replaces the editor with the
 bundled resume.
