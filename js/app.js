@@ -1,9 +1,14 @@
-/* app.js - the page: type Markdown, watch the document build, download it.
+/* app.js - the page: paste Markdown, fix it on the sheet, download the .docx.
  *
  * The preview is drawn from the same block model as the .docx rather than from
  * a generic markdown renderer. That is the only way the page ruler can mean
  * anything: if the preview came from a different pipeline, its page breaks
  * would be a different document's page breaks.
+ *
+ * The Markdown stays the single source of truth. Every piece of text on the
+ * sheet is an editable field stamped with the source line it came from; typing
+ * in one rewrites that one line of Markdown, and everything else (the model,
+ * the .docx) is derived from the Markdown as before.
  */
 (function () {
   'use strict';
@@ -21,7 +26,6 @@
     sample:   document.getElementById('sample'),
     role:     document.getElementById('role'),
     filename: document.getElementById('filename'),
-    fnote:    document.getElementById('filename-note'),
     download: document.getElementById('download'),
     status:   document.getElementById('status'),
     pages:    document.getElementById('pages'),
@@ -30,12 +34,18 @@
     scaler:   document.getElementById('scaler'),
     wrap:     document.getElementById('wrap'),
     sheet:    document.getElementById('sheet'),
-    rules:    document.getElementById('rules')
+    rules:    document.getElementById('rules'),
+    flow:     document.getElementById('flow'),
+    vSplit:   document.getElementById('view-split'),
+    vWriter:  document.getElementById('view-writer'),
+    bar:      document.getElementById('bar')
   };
 
   var model = null;         // { header, sections }
-  var prefs = { role: '', filename: '', filenameEdited: false, md: '' };
+  var prefs = { role: '', filename: '', filenameEdited: false, md: '',
+                view: 'split', flow: true };
   var timer = null;
+  var prompting = false;
 
   /* ---------------------------------------------------------------- state */
 
@@ -46,6 +56,8 @@
       prefs.filename = saved.filename || '';
       prefs.filenameEdited = !!saved.filenameEdited;
       prefs.md = typeof saved.md === 'string' ? saved.md : '';
+      prefs.view = saved.view === 'writer' ? 'writer' : 'split';
+      prefs.flow = saved.flow !== false;
     } catch (e) { /* private window, cleared storage: defaults are fine */ }
   }
 
@@ -85,16 +97,14 @@
       prefs.filename = defaultFilename();
       el.filename.value = prefs.filename;
     }
-    el.fnote.textContent = prefs.filenameEdited
-      ? 'Custom name. Clear the box to track the role again.'
-      : 'Default. Edit to override.';
   }
 
   /* -------------------------------------------------------------- preview */
 
   function esc(s) {
     return String(s === undefined || s === null ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   var INLINE_RE = /\*\*([^*]+)\*\*|\*([^*]+)\*|\[([^\]]+)\]\(([^)]+)\)/g;
@@ -114,69 +124,88 @@
   }
 
   var skillTick = 0;
+  var PIPE = '&nbsp;&nbsp;|&nbsp;&nbsp;';
 
-  function dl(n) { return n === undefined ? '' : ' data-line="' + n + '"'; }
+  /* A paragraph tied to one source line. `kind` and `form` tell the writer
+   * which Markdown shape to put back when one of its fields is edited. */
+  function P(cls, line, kind, form, inner) {
+    return '<p class="' + cls + '"' +
+           (line === undefined ? '' : ' data-line="' + line + '"') +
+           (kind ? ' data-k="' + kind + '"' : '') +
+           (form ? ' data-v="' + form + '"' : '') + '>' + inner + '</p>';
+  }
+
+  /* An editable field. Plain fields hold text only; rich fields may hold bold,
+   * italic and links. `blk` makes the whole row clickable, not just the ink. */
+  function F(name, html, opt) {
+    opt = opt || {};
+    return '<span class="ed' + (opt.blk ? ' blk' : '') + (opt.cls ? ' ' + opt.cls : '') +
+           '" contenteditable="true" spellcheck="false" data-f="' + name + '"' +
+           (opt.plain ? ' data-p="1"' : '') + '>' + html + '</span>';
+  }
 
   function blockHtml(b) {
     switch (b.t) {
-      case 'role': {
-        var h = '<p class="r-role"' + dl(b.line) + '>' + esc(b.role) + '</p>';
-        if (b.org || b.dates) {
-          h += '<p class="r-org"' + dl(b.line) + '>';
-          if (b.org) h += '<span class="r-emp">' + inlineHtml(b.org) + '</span>';
-          if (b.dates) h += '<span class="r-dates">' + (b.org ? '&nbsp;&nbsp;|&nbsp;&nbsp;' : '') + esc(b.dates) + '</span>';
-          h += '</p>';
-        }
-        return h;
-      }
+      case 'role':
+        return P('r-role', b.line, 'role', '',
+          '<span>' + F('role', esc(b.role), { plain: true, cls: 'r-title' }) +
+          (b.org ? '<span class="r-pipe">  |  </span>' +
+                   F('org', inlineHtml(b.org), { cls: 'r-emp' }) : '') + '</span>' +
+          (b.dates ? F('dates', esc(b.dates), { plain: true, cls: 'r-dates' }) : ''));
       case 'context':
-        return '<p class="r-context"' + dl(b.line) + '>' + inlineHtml(b.text) + '</p>';
+        return P('r-context', b.line, 'context', b.ital ? 'ital' : '',
+                 F('text', inlineHtml(b.text), { blk: true }));
       case 'subhead':
-        return '<p class="r-subhead"' + dl(b.line) + '>' + esc(b.text) + '</p>';
+        return P('r-subhead', b.line, 'subhead', '',
+                 F('text', esc(b.text), { blk: true, plain: true }));
       case 'callout':
-        return '<p class="r-callout"' + dl(b.line) + '>' + inlineHtml(b.text) + '</p>';
+        return P('r-callout', b.line, 'callout', '',
+                 F('text', inlineHtml(b.text), { blk: true }));
       case 'skill': {
         var alt = (skillTick++ % 2 === 1) ? ' alt' : '';
-        return '<p class="r-skill' + alt + '"' + dl(b.line) + '>' +
-               (b.label ? '<span class="r-skill-label">' + esc(b.label) + '</span>&nbsp;&nbsp;&nbsp;' : '') +
-               inlineHtml(b.text) + '</p>';
+        return P('r-skill' + alt, b.line, 'skill', b.table ? 'table' : '',
+          (b.label ? F('label', esc(b.label), { plain: true, cls: 'r-skill-label' }) +
+                     '&nbsp;&nbsp;&nbsp;' : '') +
+          F('text', inlineHtml(b.text)));
       }
       case 'edu': {
-        var tail = [];
-        if (b.school) tail.push(esc(b.school));
-        if (b.year) tail.push(esc(b.year));
-        var e = '<p class="r-edu"' + dl(b.line) + '><span class="r-deg">' + esc(b.degree) + '</span>' +
-                (tail.length ? '<span class="r-edu-meta">&nbsp;&nbsp;|&nbsp;&nbsp;' +
-                  tail.join('&nbsp;&nbsp;|&nbsp;&nbsp;') + '</span>' : '') + '</p>';
-        if (b.note) e += '<p class="r-note"' + dl(b.noteLine) + '>' + inlineHtml(b.note) + '</p>';
-        return e;
+        var e = F('degree', esc(b.degree), { plain: true, cls: 'r-deg' });
+        if (b.school) e += '<span class="r-edu-meta">' + PIPE + '</span>' +
+                           F('school', esc(b.school), { plain: true, cls: 'r-edu-meta' });
+        if (b.year) e += '<span class="r-edu-meta">' + PIPE + '</span>' +
+                         F('year', esc(b.year), { plain: true, cls: 'r-edu-meta' });
+        var out = P('r-edu', b.line, 'edu', b.form || 'dash', e);
+        if (b.note) {
+          /* A note written on the degree's own line is written back with it. */
+          out += b.noteLine === b.line
+            ? P('r-note', b.line, '', '', F('note', inlineHtml(b.note), { blk: true }))
+            : P('r-note', b.noteLine, 'para', '', F('text', inlineHtml(b.note), { blk: true }));
+        }
+        return out;
       }
       case 'bullet':
-        return '<p class="r-bullet"' + dl(b.line) + '>' +
-               (b.label ? '<strong>' + esc(b.label) + ': </strong>' : '') +
-               inlineHtml(b.text) + '</p>';
+        return P('r-bullet', b.line, 'bullet', '',
+          F('text', (b.label ? '<strong>' + esc(b.label) + ': </strong>' : '') +
+                    inlineHtml(b.text), { blk: true }));
       default:
-        return '<p class="r-para"' + dl(b.line) + '>' + inlineHtml(b.text) + '</p>';
+        return P('r-para', b.line, 'para', '', F('text', inlineHtml(b.text), { blk: true }));
     }
   }
 
   function renderPreview() {
     var h = model.header, out = '';
     var hl = h.lines || {};
-    if (h.name) out += '<p class="r-name"' + dl(hl.name) + '>' + esc(h.name) + '</p>';
-
-    var contact = h.contactText ? inlineHtml(h.contactText) : '';
-    (h.contactLinks || []).forEach(function (l) {
-      if (contact) contact += '&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;';
-      contact += '<a href="' + esc(l.url) + '">' + esc(l.label) + '</a>';
-    });
-    if (contact) out += '<p class="r-contact"' + dl(hl.contact) + '>' + contact + '</p>';
-    if (h.headline) out += '<p class="r-headline"' + dl(hl.headline) + '>' + inlineHtml(h.headline) + '</p>';
-    if (h.subline) out += '<p class="r-subline"' + dl(hl.subline) + '>' + inlineHtml(h.subline) + '</p>';
+    if (h.name) out += P('r-name', hl.name, 'name', '', F('text', esc(h.name), { blk: true, plain: true }));
+    if (h.contactRaw) {
+      out += P('r-contact', hl.contact, 'contact', '',
+               F('text', inlineHtml(h.contactRaw.replace(/\s*\|\s*/g, '   |   ')), { blk: true }));
+    }
+    if (h.headline) out += P('r-headline', hl.headline, 'headline', '', F('text', inlineHtml(h.headline), { blk: true }));
+    if (h.subline) out += P('r-subline', hl.subline, 'para', '', F('text', inlineHtml(h.subline), { blk: true }));
 
     skillTick = 0;
     model.sections.forEach(function (s) {
-      if (s.name) out += '<p class="r-section"' + dl(s.line) + '>' + esc(s.name) + '</p>';
+      if (s.name) out += P('r-section', s.line, 'section', '', F('text', esc(s.name), { blk: true, plain: true }));
       s.blocks.forEach(function (b) { out += blockHtml(b); });
     });
 
@@ -187,7 +216,7 @@
     fitPreview();
   }
 
-  /* The sheet is a fixed 8.5in wide. Rather than force a horizontal scrollbar
+  /* The sheet is a fixed A4 width. Rather than force a horizontal scrollbar
    * on a laptop, scale it down to whatever width the column has. Transforms do
    * not change layout metrics, so the page measurement below stays honest. */
   function fitPreview() {
@@ -223,12 +252,13 @@
       line.dataset.label = 'page ' + (i + 1);
       el.rules.appendChild(line);
     }
-    el.pages.textContent = count + (count === 1 ? ' page' : ' pages') + ' (estimated)';
+    el.pages.textContent = '~' + count + (count === 1 ? ' page' : ' pages');
+    el.pages.title = 'Estimated. A browser and Word break lines differently.';
   }
 
   /* ------------------------------------------------------------ highlight
-   * Every preview element carries the source line it came from. The element
-   * under the editor caret is the last one starting at or before that line. */
+   * While the caret is in the Markdown, the block it belongs to is marked on
+   * the sheet: the last element starting at or before the caret's line. */
 
   var hlEl = null;
 
@@ -238,7 +268,13 @@
     return n;
   }
 
+  function clearHighlight() {
+    if (hlEl) hlEl.classList.remove(HL_CLASS);
+    hlEl = null;
+  }
+
   function syncHighlight(scroll) {
+    if (document.activeElement !== el.editor) { clearHighlight(); return; }
     var line = caretLine(), best = null, bestLine = -1;
     var nodes = el.sheet.querySelectorAll('[data-line]');
     for (var i = 0; i < nodes.length; i++) {
@@ -246,7 +282,7 @@
       if (n <= line && n >= bestLine) { best = nodes[i]; bestLine = n; }
     }
     if (best === hlEl) return;
-    if (hlEl) hlEl.classList.remove(HL_CLASS);
+    clearHighlight();
     hlEl = best;
     if (!hlEl) return;
     hlEl.classList.add(HL_CLASS);
@@ -259,14 +295,9 @@
 
   /* --------------------------------------------------------------- render */
 
-  function refresh() {
-    if (!model) return;
-    renderPreview();
-  }
-
   function reparse() {
     model = window.ResumeParse.parse(el.editor.value);
-    refresh();
+    renderPreview();
     el.download.disabled = !window.docx || !el.editor.value.trim();
   }
 
@@ -284,12 +315,251 @@
     el.editor.value = md;
     prefs.md = md;
     savePrefs();
-    el.source.textContent = label || '';
+    if (label !== undefined) el.source.textContent = label;
     reparse();
   }
 
+  /* ------------------------------------------------- editing on the sheet
+   * DOM back to Markdown. Only the three inline marks the parser knows are
+   * written; any other markup a browser adds while editing is flattened. */
+
+  function tidy(s) {
+    return s.replace(/​/g, '').replace(/[ \s]+/g, ' ');
+  }
+
+  function mark(inner, m) {
+    var core = inner.trim();
+    if (!core) return inner;
+    /* Keep spaces outside the marks so "**Label:** text" stays parseable. */
+    return inner.match(/^\s*/)[0] + m + core + m + inner.match(/\s*$/)[0];
+  }
+
+  function inlineMd(node) {
+    var out = '';
+    for (var c = node.firstChild; c; c = c.nextSibling) {
+      if (c.nodeType === 3) { out += c.nodeValue; continue; }
+      if (c.nodeType !== 1) continue;
+      var tag = c.tagName, inner = inlineMd(c);
+      if (tag === 'STRONG' || tag === 'B') out += mark(inner, '**');
+      else if (tag === 'EM' || tag === 'I') out += mark(inner, '*');
+      else if (tag === 'A' && c.getAttribute('href') && inner.trim()) {
+        out += '[' + inner.trim() + '](' + c.getAttribute('href') + ')';
+      } else if (tag === 'BR') out += ' ';
+      else out += inner;
+    }
+    return out;
+  }
+
+  function fieldMd(span) {
+    var raw = span.hasAttribute('data-p') ? span.textContent : inlineMd(span);
+    return tidy(raw).trim();
+  }
+
+  function bare(s) { return s.replace(/\*+/g, '').trim(); }
+
+  function join(parts) { return parts.filter(Boolean).join(' | '); }
+
+  /* One block's fields -> its line of Markdown, in the form it was written. */
+  function lineMd(kind, form, f) {
+    switch (kind) {
+      case 'name':     return '# ' + f.text;
+      case 'contact':  return f.text.replace(/\s*\|\s*/g, ' | ');
+      case 'headline': return '**' + bare(f.text) + '**';
+      case 'section':  return '## ' + f.text;
+      case 'role':     return '### ' + join([f.role, f.org, f.dates]);
+      case 'context':  return form === 'ital' ? '*' + bare(f.text) + '*' : f.text;
+      case 'subhead':  return '#### ' + f.text;
+      case 'callout':  return '***' + bare(f.text) + '***';
+      case 'skill':
+        if (form === 'table') return '| ' + (f.label || '') + ' | ' + f.text + ' |';
+        return f.label ? '**' + f.label + '** - ' + f.text : f.text;
+      case 'edu':
+        if (form === 'atx') return '### ' + join([f.degree, f.school, f.year]);
+        if (form === 'comma') {
+          return '**' + f.degree + '**' + (f.school ? ', ' + f.school : '') +
+                 (f.year ? ', ' + f.year : '') + (f.note ? '. ' + f.note : '');
+        }
+        return '**' + f.degree + '** - ' + (f.school || '') +
+               (f.year ? ' *' + f.year + '*' : '');
+      case 'bullet':   return '- ' + f.text;
+      default:         return f.text;
+    }
+  }
+
+  function lineOf(node) {
+    var p = node && node.closest ? node.closest('[data-line]') : null;
+    return p ? +p.getAttribute('data-line') : -1;
+  }
+
+  function setLine(n, text) {
+    var lines = el.editor.value.split('\n');
+    lines[n] = text;
+    el.editor.value = lines.join('\n');
+    prefs.md = el.editor.value;
+    savePrefs();
+  }
+
+  /* Write the block at source line `n` back from what is on the sheet. The
+   * sheet is left alone: it already shows what was typed, and rebuilding it
+   * mid-keystroke would throw the caret away. */
+  function commitLine(n) {
+    var nodes = el.sheet.querySelectorAll('[data-line="' + n + '"]');
+    var kind = '', form = '', f = {};
+    for (var i = 0; i < nodes.length; i++) {
+      if (!kind && nodes[i].dataset.k) {
+        kind = nodes[i].dataset.k;
+        form = nodes[i].dataset.v || '';
+      }
+      var spans = nodes[i].querySelectorAll('[data-f]');
+      for (var j = 0; j < spans.length; j++) f[spans[j].dataset.f] = fieldMd(spans[j]);
+    }
+    if (!kind) return;
+    setLine(n, lineMd(kind, form, f));
+    model = window.ResumeParse.parse(el.editor.value);
+    el.source.textContent = 'edited on the sheet';
+    measurePages();
+    fitPreview();
+  }
+
+  function activeField() {
+    var a = document.activeElement;
+    return a && a.classList && a.classList.contains('ed') && el.sheet.contains(a) ? a : null;
+  }
+
+  function focusLine(n, atEnd) {
+    var f = el.sheet.querySelector('[data-line="' + n + '"] .ed');
+    if (!f) return;
+    f.focus();
+    var r = document.createRange();
+    r.selectNodeContents(f);
+    r.collapse(!atEnd);
+    var s = window.getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+  }
+
+  /* Enter in a bullet starts the next bullet, carrying over whatever sat to
+   * the right of the caret. */
+  function splitBullet(field) {
+    var sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    var r = sel.getRangeAt(0);
+    r.deleteContents();
+    var tail = document.createRange();
+    tail.selectNodeContents(field);
+    tail.setStart(r.endContainer, r.endOffset);
+    var holder = document.createElement('span');
+    holder.appendChild(tail.extractContents());
+    var n = lineOf(field);
+    commitLine(n);
+    var lines = el.editor.value.split('\n');
+    lines.splice(n + 1, 0, '- ' + tidy(inlineMd(holder)).trim());
+    setMarkdown(lines.join('\n'));
+    focusLine(n + 1, false);
+  }
+
+  function removeLine(field) {
+    var n = lineOf(field), prev = -1;
+    var nodes = el.sheet.querySelectorAll('[data-line]');
+    for (var i = 0; i < nodes.length; i++) {
+      var k = +nodes[i].getAttribute('data-line');
+      if (k < n && k > prev) prev = k;
+    }
+    var lines = el.editor.value.split('\n');
+    lines.splice(n, 1);
+    setMarkdown(lines.join('\n'));
+    if (prev >= 0) focusLine(prev, true);
+  }
+
+  function linkOnSheet() {
+    var sel = window.getSelection();
+    if (!sel.rangeCount || sel.isCollapsed) {
+      setStatus('Select the words to turn into a link first.', 'err');
+      return;
+    }
+    var saved = sel.getRangeAt(0).cloneRange(), field = activeField();
+    prompting = true;                 // the dialog blurs the field; do not rebuild
+    var url = window.prompt('Link address', 'https://');
+    prompting = false;
+    if (field) field.focus();
+    if (!url || url === 'https://') return;
+    sel.removeAllRanges();
+    sel.addRange(saved);
+    document.execCommand('createLink', false, url.trim());
+  }
+
+  function format(what) {
+    var field = activeField();
+    if (field) {
+      if (field.hasAttribute('data-p')) {
+        setStatus('Headings, titles and dates carry their own style. Bold, italic and links work in body text.', 'err');
+        return;
+      }
+      setStatus('');
+      if (what === 'link') linkOnSheet();
+      else document.execCommand(what, false, null);
+      return;
+    }
+    el.editor.focus();
+    if (what === 'bold') wrapSelection('**');
+    else if (what === 'italic') wrapSelection('*');
+    else insertLink();
+  }
+
+  el.sheet.addEventListener('input', function (e) {
+    var field = e.target.closest ? e.target.closest('.ed') : null;
+    if (field) commitLine(lineOf(field));
+  });
+
+  el.sheet.addEventListener('keydown', function (e) {
+    var field = activeField();
+    if (!field) return;
+    var mod = (e.ctrlKey || e.metaKey) && !e.altKey;
+    if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); format('link'); return; }
+    if (mod && (e.key.toLowerCase() === 'b' || e.key.toLowerCase() === 'i') &&
+        field.hasAttribute('data-p')) { e.preventDefault(); return; }
+    var kind = field.closest('[data-k]') ? field.closest('[data-k]').dataset.k : '';
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (kind === 'bullet' && !e.shiftKey) splitBullet(field);
+      return;
+    }
+    if (e.key === 'Backspace' && kind === 'bullet' && !tidy(field.textContent).trim()) {
+      e.preventDefault();
+      removeLine(field);
+    }
+  });
+
+  /* Pasting into the sheet brings text only, on one line. */
+  el.sheet.addEventListener('paste', function (e) {
+    if (!activeField()) return;
+    e.preventDefault();
+    var text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text.replace(/\s*[\r\n]+\s*/g, ' '));
+  });
+  el.sheet.addEventListener('drop', function (e) { e.preventDefault(); });
+
+  /* Entering a field brings its line into view in the Markdown column. */
+  el.sheet.addEventListener('focusin', function (e) {
+    var n = lineOf(e.target);
+    if (n < 0 || document.body.classList.contains('writer')) return;
+    var total = el.editor.value.split('\n').length || 1;
+    el.editor.scrollTop = Math.max(0,
+      (n / total) * el.editor.scrollHeight - el.editor.clientHeight / 2);
+  });
+
+  /* Leaving the sheet rebuilds it from the Markdown, which settles anything
+   * the edit changed structurally (a line that is now a different block). */
+  el.sheet.addEventListener('focusout', function (e) {
+    if (prompting || (e.relatedTarget && el.sheet.contains(e.relatedTarget))) return;
+    if (model) reparse();
+  });
+
+  /* ------------------------------------------------------------- download */
+
   function download() {
-    if (!model) return;
+    if (!el.editor.value.trim()) return;
+    model = window.ResumeParse.parse(el.editor.value);
     el.download.disabled = true;
     var original = el.download.textContent;
     el.download.textContent = 'Building...';
@@ -322,23 +592,50 @@
     }, 0);
   }
 
-  /* ----------------------------------------------------------------- wire */
+  /* ------------------------------------------------------ Markdown column */
 
   el.editor.addEventListener('input', scheduleReparse);
+  el.editor.addEventListener('blur', clearHighlight);
   document.addEventListener('selectionchange', function () {
     if (document.activeElement === el.editor && model) syncHighlight(true);
   });
 
-  /* Tab indents instead of leaving the editor, which matters when the whole
-   * document is written here rather than pasted in. */
-  el.editor.addEventListener('keydown', function (e) {
-    if (e.key !== 'Tab' || e.ctrlKey || e.altKey || e.metaKey) return;
-    e.preventDefault();
-    var start = el.editor.selectionStart, end = el.editor.selectionEnd;
-    var v = el.editor.value;
-    el.editor.value = v.slice(0, start) + '  ' + v.slice(end);
-    el.editor.selectionStart = el.editor.selectionEnd = start + 2;
+  function wrapSelection(mark) {
+    var ed = el.editor, s = ed.selectionStart, e = ed.selectionEnd;
+    var sel = ed.value.slice(s, e) || 'text';
+    ed.value = ed.value.slice(0, s) + mark + sel + mark + ed.value.slice(e);
+    ed.focus();
+    ed.setSelectionRange(s + mark.length, s + mark.length + sel.length);
     scheduleReparse();
+  }
+
+  function insertLink() {
+    var ed = el.editor, s = ed.selectionStart, e = ed.selectionEnd;
+    var sel = ed.value.slice(s, e) || 'link text';
+    var url = 'https://';
+    ed.value = ed.value.slice(0, s) + '[' + sel + '](' + url + ')' + ed.value.slice(e);
+    ed.focus();
+    var u = s + sel.length + 3;
+    ed.setSelectionRange(u, u + url.length);
+    scheduleReparse();
+  }
+
+  el.editor.addEventListener('keydown', function (e) {
+    if (e.key === 'Tab' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      /* Tab indents instead of leaving the editor. */
+      e.preventDefault();
+      var start = el.editor.selectionStart, end = el.editor.selectionEnd;
+      var v = el.editor.value;
+      el.editor.value = v.slice(0, start) + '  ' + v.slice(end);
+      el.editor.selectionStart = el.editor.selectionEnd = start + 2;
+      scheduleReparse();
+      return;
+    }
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    var k = e.key.toLowerCase();
+    if (k === 'b') { e.preventDefault(); wrapSelection('**'); }
+    else if (k === 'i') { e.preventDefault(); wrapSelection('*'); }
+    else if (k === 'k') { e.preventDefault(); insertLink(); }
   });
 
   function readFile(file) {
@@ -373,84 +670,33 @@
     }
   });
 
-  /* ------------------------------------------------------------- toolbar
-   * Each button drops Markdown for one feature into the editor. {{...}} marks
-   * the placeholder that ends up selected, ready to be typed over. */
+  /* ------------------------------------------------------------------ bar */
 
-  var SNIPPETS = {
-    header: '# {{YOUR NAME}}\nCity | +00 0000 0000 | email@example.com | [LinkedIn](https://linkedin.com/in/you)\n**Headline | Key Strength | Key Strength**\nOne-line tagline shown in italic with a rule beneath',
-    section: '## {{SECTION TITLE}}',
-    role: '### {{Job Title}} | Employer\n*Jan 2024 - Present*',
-    dates: '*{{Jan 2024 - Present}}*',
-    scope: '*{{One sentence on the scope or context of this role.}}*',
-    subhead: '#### {{Sub-heading}}',
-    bullet: '* {{Achievement or responsibility}}',
-    lbullet: '* **{{Label:}}** Describe the result here',
-    callout: '***Guiding Principle: {{your principle}}***',
-    skills: '| {{Category}} | skill one, skill two, skill three |\n| --- | --- |\n| Category | skill one, skill two |',
-    edu: '**{{Degree}}** - School *2024*\nOptional coursework or honours note'
-  };
-
-  function pick(snippet) {
-    var i = snippet.indexOf('{{'), j = snippet.indexOf('}}');
-    if (i < 0 || j < i) return { text: snippet, from: snippet.length, to: snippet.length };
-    var text = snippet.slice(0, i) + snippet.slice(i + 2, j) + snippet.slice(j + 2);
-    return { text: text, from: i, to: j - 2 };
+  function setView(view) {
+    prefs.view = view === 'writer' ? 'writer' : 'split';
+    document.body.classList.toggle('writer', prefs.view === 'writer');
+    el.vSplit.setAttribute('aria-pressed', String(prefs.view === 'split'));
+    el.vWriter.setAttribute('aria-pressed', String(prefs.view === 'writer'));
+    savePrefs();
+    if (model) { measurePages(); fitPreview(); }
   }
 
-  function insertBlock(name) {
-    var ed = el.editor, v = ed.value, p = pick(SNIPPETS[name]), at, pre, post;
-    if (name === 'header') {
-      at = 0; pre = ''; post = v.trim() ? '\n\n' : '';
-    } else if (name === 'dates') {
-      at = v.indexOf('\n', ed.selectionEnd); at = at < 0 ? v.length : at;
-      pre = '\n'; post = '';
-    } else {
-      at = v.indexOf('\n', ed.selectionEnd); at = at < 0 ? v.length : at;
-      pre = v.trim() ? '\n\n' : ''; post = '';
-    }
-    ed.value = v.slice(0, at) + pre + p.text + post + v.slice(at);
-    ed.focus();
-    ed.setSelectionRange(at + pre.length + p.from, at + pre.length + p.to);
-    var line = ed.value.slice(0, ed.selectionStart).split('\n').length - 1;
-    ed.scrollTop = Math.max(0, line * 19 - ed.clientHeight / 2);
-    scheduleReparse();
-  }
+  el.vSplit.addEventListener('click', function () { setView('split'); });
+  el.vWriter.addEventListener('click', function () { setView('writer'); });
 
-  function wrapSelection(mark) {
-    var ed = el.editor, s = ed.selectionStart, e = ed.selectionEnd;
-    var sel = ed.value.slice(s, e) || 'text';
-    ed.value = ed.value.slice(0, s) + mark + sel + mark + ed.value.slice(e);
-    ed.focus();
-    ed.setSelectionRange(s + mark.length, s + mark.length + sel.length);
-    scheduleReparse();
-  }
-
-  function insertLink() {
-    var ed = el.editor, s = ed.selectionStart, e = ed.selectionEnd;
-    var sel = ed.value.slice(s, e) || 'link text';
-    var url = 'https://';
-    ed.value = ed.value.slice(0, s) + '[' + sel + '](' + url + ')' + ed.value.slice(e);
-    ed.focus();
-    var u = s + sel.length + 3;
-    ed.setSelectionRange(u, u + url.length);
-    scheduleReparse();
-  }
-
-  document.getElementById('toolbar').addEventListener('click', function (e) {
-    var b = e.target.closest('button');
-    if (!b) return;
-    if (b.dataset.wrap) wrapSelection(b.dataset.wrap);
-    else if (b.dataset.ins === 'link') insertLink();
-    else if (b.dataset.ins) insertBlock(b.dataset.ins);
+  /* Format buttons must not take focus, or the selection they act on is gone. */
+  el.bar.addEventListener('mousedown', function (e) {
+    if (e.target.closest('[data-fmt]')) e.preventDefault();
+  });
+  el.bar.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-fmt]');
+    if (b) format(b.dataset.fmt);
   });
 
-  el.editor.addEventListener('keydown', function (e) {
-    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
-    var k = e.key.toLowerCase();
-    if (k === 'b') { e.preventDefault(); wrapSelection('**'); }
-    else if (k === 'i') { e.preventDefault(); wrapSelection('*'); }
-    else if (k === 'k') { e.preventDefault(); insertLink(); }
+  el.flow.addEventListener('toggle', function () {
+    prefs.flow = el.flow.open;
+    savePrefs();
+    if (model) fitPreview();
   });
 
   el.sample.addEventListener('click', loadSample);
@@ -466,7 +712,6 @@
                            el.filename.value.trim() !== defaultFilename();
     prefs.filename = el.filename.value;
     if (!prefs.filenameEdited) syncFilename();
-    else el.fnote.textContent = 'Custom name. Clear the box to track the role again.';
     savePrefs();
   });
 
@@ -487,16 +732,18 @@
       .catch(function (err) {
         setStatus(location.protocol === 'file:'
           ? 'Opened over file://, so the browser blocks loading the sample. ' +
-            'Type or paste your Markdown instead, or serve the folder over HTTP.'
-          : 'Could not load the sample (' + err + '). Type or paste instead.',
+            'Paste your Markdown instead, or serve the folder over HTTP.'
+          : 'Could not load the sample (' + err + '). Paste instead.',
           'err');
       });
   }
 
   loadPrefs();
   el.role.value = prefs.role;
+  el.flow.open = prefs.flow;
   syncFilename();
   if (prefs.filenameEdited && prefs.filename) el.filename.value = prefs.filename;
+  setView(prefs.view);
 
   if (!window.docx) {
     setStatus('The docx library did not load, so download is unavailable. ' +

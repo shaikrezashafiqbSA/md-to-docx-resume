@@ -42,8 +42,7 @@ I am a digital adoption manager with eight years across change management, data 
 
 ## PROFESSIONAL EXPERIENCE
 
-### Workforce Development and Skills Board (WDSB)
-**Assistant Manager, Digital Platforms and Adoption** | Mar 2022 to Present
+### Assistant Manager, Digital Platforms | Workforce Development and Skills Board | Mar 2022 to Present
 
 *Owned adoption, reporting, support and vendor management for the agency's enterprise DAM (Adobe Experience Manager Assets) and records platform, serving 1,800 officers across 14 divisions.*
 
@@ -74,16 +73,14 @@ I am a digital adoption manager with eight years across change management, data 
 - Recommended against an RPA build for asset-metadata tagging after assessment showed a 14% error rate on edge cases, and documented the decision for audit.
 - Supervised 2 executives and 1 intern. Wrote a 40-page handover pack so successors can run every recurring process without rebuilding context.
 
-### Northbridge Digital Consulting Pte Ltd
-**Senior Consultant, Public Sector Implementations** | Mar 2020 to Feb 2022
+### Senior Consultant, Public Sector | Northbridge Digital Consulting Pte Ltd | Mar 2020 to Feb 2022
 
 - Led change and training workstreams for SharePoint Online and ServiceNow rollouts at 3 public agencies, reaching 2,400 users.
 - Gathered requirements through 60+ structured interviews and user journey walkthroughs, and converted them into vendor-ready specifications.
 - Delivered Level 2 support and managed escalations to Level 3 product teams under contracted service levels.
 - Wrote SQL reports to track post-go-live usage and identify units needing follow-up training.
 
-### Tanjong Health Partners
-**Data Analyst, Operations Insights** | Jul 2018 to Feb 2020
+### Data Analyst, Operations Insights | Tanjong Health Partners | Jul 2018 to Feb 2020
 
 - Built Python and SQL reports on clinic throughput across 9 sites, replacing 2 weekly manual spreadsheets.
 - Designed Tableau dashboards for operations heads, adopted as the standard weekly review format.
@@ -93,8 +90,8 @@ I am a digital adoption manager with eight years across change management, data 
 
 ## EDUCATION
 
-**National University of Singapore**
-Bachelor of Science (Business Analytics), Honours (Distinction) | 2014 to 2018
+### Bachelor of Science (Business Analytics), Honours (Distinction) | National University of Singapore | 2018
+
 - Final-year project: predicting service adoption among SME users of a government e-services portal
 - President, NUS Statistics and Data Science Society (2016 to 2017)
 

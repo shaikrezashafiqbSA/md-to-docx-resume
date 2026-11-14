@@ -12,54 +12,113 @@
     --body-font: Calibri, Carlito, "Segoe UI", system-ui, sans-serif;
     --ui-font: "Segoe UI", system-ui, -apple-system, sans-serif;
     --mono-font: ui-monospace, "Cascadia Mono", Consolas, monospace;
-    --shell: #f4f5f7; --panel: #ffffff; --line: #dfe3e8;
+    --shell: #f4f5f7; --panel: #ffffff; --line: #dfe3e8; --muted: #667; --faint: #8a93a0;
   }
 
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body { margin: 0; background: var(--shell); color: #222; overflow: hidden;
+         display: flex; flex-direction: column; padding: 12px 18px 18px; gap: 10px;
          font-family: var(--ui-font); font-size: 14px; }
 
-  .layout { display: flex; align-items: stretch; gap: 18px;
-            height: 100%; padding: 18px; }
-
-  /* ---------------------------------------------------------- controls */
-  .panel { flex: 0 0 288px; overflow-y: auto; background: var(--panel);
-           border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
-  .panel h1 { font-size: 16px; margin: 0 0 2px; letter-spacing: .01em; }
-  .panel .sub { color: #667; font-size: 12px; margin: 0 0 14px; line-height: 1.4; }
-  .panel h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
-              color: #667; margin: 18px 0 6px; font-weight: 600; }
-  .panel .field-note { font-size: 11.5px; color: #8a93a0; margin: 4px 0 0;
-                       line-height: 1.4; word-break: break-all; }
-  input[type="text"] {
-    width: 100%; padding: 7px 9px; font: inherit; font-size: 13px;
-    border: 1px solid var(--line); border-radius: 5px; background: #fff; color: #222; }
-  input[type="text"]:focus, textarea:focus {
-    outline: 2px solid var(--teal); outline-offset: -1px; }
-
-  .row { display: flex; gap: 8px; align-items: center; margin-top: 18px; }
   button { font: inherit; font-size: 13px; border-radius: 5px; cursor: pointer;
-           border: 1px solid var(--line); background: #fff; padding: 8px 11px; }
-  button:hover { border-color: #b9c0c9; }
-  #download { flex: 1; background: var(--teal); color: #fff; border-color: transparent;
-              font-weight: 600; }
+           border: 1px solid var(--line); background: #fff; padding: 6px 10px;
+           color: #222; white-space: nowrap; }
+  button:hover { border-color: var(--teal); background: #f2f9fb; }
+  input[type="text"] { padding: 6px 9px; font: inherit; font-size: 13px; min-width: 0;
+    border: 1px solid var(--line); border-radius: 5px; background: #fff; color: #222; }
+  input[type="text"]:focus, textarea:focus { outline: 2px solid var(--teal); outline-offset: -1px; }
+
+  /* ---------------------------------------------------------- workflow
+   * Where this page sits in the larger pipeline. Connectors use the same
+   * marching-dash "flow animation" draw.io puts on an edge. */
+  .flow { flex: none; background: var(--panel); border: 1px solid var(--line);
+          border-radius: 8px; }
+  .flow > summary { cursor: pointer; list-style: none; padding: 6px 12px;
+                    font-size: 11px; font-weight: 600; text-transform: uppercase;
+                    letter-spacing: .08em; color: var(--muted); user-select: none; }
+  .flow > summary::-webkit-details-marker { display: none; }
+  .flow > summary::before { content: "\25B8"; display: inline-block; margin-right: 6px;
+                            transition: transform .15s; }
+  .flow[open] > summary::before { transform: rotate(90deg); }
+  .flow > summary span { font-weight: 400; text-transform: none; letter-spacing: 0;
+                         font-size: 11.5px; color: var(--faint); margin-left: 6px; }
+  .flow-row { display: flex; align-items: stretch; gap: 0; padding: 2px 12px 12px;
+              overflow-x: auto; }
+  .fl-end { flex: none; align-self: center; text-align: center; font-size: 11.5px;
+            line-height: 1.3; color: var(--muted); padding: 8px 12px;
+            border: 1px dashed #b9c0c9; border-radius: 999px; background: #fafbfc; }
+  .fl-end b { display: block; color: #333; font-size: 12px; }
+  .fl-stage { flex: 1 1 0; min-width: 215px; border: 1px solid var(--line);
+              border-radius: 8px; padding: 7px 10px 8px; background: #fff;
+              border-top: 3px solid #b9c0c9; }
+  .fl-stage.here { border-color: var(--teal); background: #f2f9fb;
+                   box-shadow: 0 0 0 3px rgba(23,122,154,.12); }
+  .fl-top { display: flex; align-items: center; gap: 6px; }
+  .fl-num { flex: none; width: 18px; height: 18px; border-radius: 50%;
+            background: var(--bronze); color: #fff; font-size: 11px; font-weight: 700;
+            display: grid; place-items: center; }
+  .fl-agent { font-size: 10px; font-weight: 700; letter-spacing: .1em;
+              text-transform: uppercase; color: var(--bronze); }
+  .fl-here { margin-left: auto; font-size: 10px; font-weight: 700; color: #fff;
+             background: var(--teal); border-radius: 999px; padding: 1px 8px; }
+  .fl-title { font-size: 13px; font-weight: 600; color: #222; margin: 3px 0 2px; }
+  .fl-line { font-size: 11.5px; line-height: 1.35; color: var(--muted); margin: 0; }
+  .fl-line b { font-weight: 600; color: #444; }
+  .fl-line code { font-family: var(--mono-font); font-size: 10.5px; color: var(--teal);
+                  background: var(--band); border-radius: 3px; padding: 0 3px; }
+  .fl-next { color: var(--faint); }
+  .fl-link { flex: 0 0 74px; position: relative; align-self: center; height: 34px; }
+  .fl-link span { position: absolute; left: 0; right: 8px; top: 0; text-align: center;
+                  font-size: 10.5px; color: var(--teal); font-family: var(--mono-font);
+                  white-space: nowrap; }
+  .fl-link::before { content: ""; position: absolute; left: 4px; right: 10px; top: 22px;
+                     height: 2px;
+                     background: repeating-linear-gradient(90deg, var(--teal) 0 6px, transparent 6px 11px);
+                     background-size: 11px 2px; animation: flow .55s linear infinite; }
+  .fl-link::after { content: ""; position: absolute; right: 3px; top: 18px;
+                    border: 5px solid transparent; border-left: 8px solid var(--teal);
+                    border-right: 0; }
+  @keyframes flow { to { background-position: 11px 0; } }
+  @media (prefers-reduced-motion: reduce) { .fl-link::before { animation: none; } }
+
+  /* --------------------------------------------------------------- bar */
+  .bar { flex: none; display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+         background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+  .brand { font-size: 14px; font-weight: 700; margin: 0 6px 0 2px; white-space: nowrap; }
+  .seg { display: flex; }
+  .seg button { border-radius: 0; margin-left: -1px; }
+  .seg button:first-child { border-radius: 5px 0 0 5px; margin-left: 0; }
+  .seg button:last-child { border-radius: 0 5px 5px 0; }
+  .seg button[aria-pressed="true"] { background: var(--teal); border-color: var(--teal);
+                                     color: #fff; position: relative; }
+  .sep { width: 1px; align-self: stretch; background: var(--line); margin: 0 4px; }
+  .fmt { min-width: 32px; padding: 6px 8px; font-family: var(--body-font); }
+  .spacer { flex: 1 1 auto; }
+  #role { flex: 0 1 170px; }
+  #filename { flex: 0 2 270px; }
+  .pages { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  #download { background: var(--teal); color: #fff; border-color: transparent; font-weight: 600; }
   #download:disabled { background: #9aa3ad; cursor: not-allowed; }
 
-  .pages { margin-top: 14px; font-size: 12px; color: #667; }
-  .status { margin-top: 10px; font-size: 12px; line-height: 1.45; }
-  .status.ok  { padding: 8px 10px; border-radius: 5px; background: #eef9f1; color: #1c6b39; }
-  .status.err { padding: 8px 10px; border-radius: 5px; background: #fdf0f1; color: #97202a; }
+  .status { position: fixed; left: 18px; bottom: 14px; z-index: 5; max-width: 520px;
+            font-size: 12px; line-height: 1.45; border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.12); }
+  .status:empty { display: none; }
+  .status.ok  { padding: 8px 10px; background: #eef9f1; color: #1c6b39; }
+  .status.err { padding: 8px 10px; background: #fdf0f1; color: #97202a; }
 
-  /* ------------------------------------------------------------ editor */
+  /* ------------------------------------------------------------ layout */
+  .layout { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; gap: 18px; }
   .col { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-  .editor-col { flex: 1 1 380px; }
+  .editor-col { flex: 1 1 340px; }
+  .stage-col { flex: 1.6 1 0; }
+  body.writer .editor-col { display: none; }
   .col-head { display: flex; align-items: baseline; justify-content: space-between;
-              gap: 10px; margin-bottom: 7px; font-size: 11px; font-weight: 600;
-              text-transform: uppercase; letter-spacing: .08em; color: #667; }
+              gap: 10px; margin-bottom: 6px; font-size: 11px; font-weight: 600;
+              text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
   .col-head .note { font-weight: 400; text-transform: none; letter-spacing: 0;
-                    font-size: 11.5px; color: #8a93a0; }
-  .col-head button { padding: 3px 8px; font-size: 11.5px; }
+                    font-size: 11.5px; color: var(--faint); }
 
   #editor { flex: 1 1 auto; width: 100%; resize: none; padding: 14px 16px;
             border: 1px solid var(--line); border-radius: 8px; background: #fff;
@@ -68,7 +127,6 @@
   #editor.over { border-color: var(--teal); background: #f2f9fb; }
 
   /* ----------------------------------------------------------- preview */
-  .stage-col { flex: 1.35 1 0; }
   .stage { flex: 1 1 auto; overflow: auto; }
   .scaler { margin: 0 auto; }
   .sheet-wrap { position: relative; width: 210mm; transform-origin: top left; }
@@ -85,7 +143,7 @@
 
   #sheet p { margin: 0; }
   .r-name { font-size: 18pt; font-weight: 700; color: var(--teal); margin-bottom: 1pt; }
-  .r-contact { font-size: 9.5pt; color: var(--grey); margin-bottom: 3pt; }
+  .r-contact { font-size: 9.5pt; color: var(--grey); margin-bottom: 3pt; white-space: pre-wrap; }
   .r-headline { font-size: 10.5pt; font-weight: 700; color: var(--teal); margin-bottom: 1pt; }
   .r-subline { font-size: 9.5pt; font-style: italic; color: var(--bronze);
                border-bottom: 1.5px solid var(--bronze); padding-bottom: 3pt;
@@ -96,10 +154,13 @@
                border-left: 3px solid var(--bronze);
                border-bottom: 0.75px solid var(--teal);
                padding: 0 0 3pt 6pt; margin: 11pt 0 5pt; }
-  .r-role { font-size: 11pt; font-weight: 700; color: var(--teal); margin-top: 11pt; }
-  .r-org { font-size: 10pt; margin-bottom: 3pt; }
-  .r-org .r-emp { font-weight: 700; color: var(--bronze); }
-  .r-org .r-dates { color: var(--grey); }
+  /* One line per role: title loudest, employer second, dates at the margin. */
+  .r-role { display: flex; justify-content: space-between; align-items: baseline;
+            align-items: last baseline; gap: 10pt; margin-top: 9pt; margin-bottom: 2pt; }
+  .r-role .r-title { font-size: 11pt; font-weight: 700; color: var(--teal); }
+  .r-role .r-emp { font-size: 10pt; font-weight: 700; color: var(--bronze); }
+  .r-role .r-pipe { font-size: 10pt; color: var(--grey); white-space: pre; }
+  .r-role .r-dates { flex: none; font-size: 9.5pt; color: var(--grey); white-space: nowrap; }
   .r-context { font-size: 9.5pt; font-style: italic; color: var(--grey); margin-bottom: 4pt; }
   .r-subhead { font-size: 9pt; font-weight: 700; text-transform: uppercase;
                letter-spacing: .03em; color: var(--bronze);
@@ -120,161 +181,101 @@
   .r-para { margin-bottom: 5pt; }
   .r-bullet { position: relative; padding-left: 16pt; margin-bottom: 3pt; }
   .r-bullet::before { content: "\2022"; position: absolute; left: 5pt; color: var(--grey); }
-  #sheet strong { color: inherit; }
-  .r-bullet strong { color: var(--ink); }
+  #sheet strong, #sheet b { color: inherit; font-weight: 700; }
+  .r-bullet strong, .r-bullet b { color: var(--ink); }
   #sheet a { color: var(--link); }
 
-  /* The block the editor caret is in: tinted, outlined, with an arrow in the margin. */
+  /* Every piece of text on the sheet is editable in place. */
+  .ed { outline: none; border-radius: 2px; cursor: text; }
+  .ed.blk { display: block; min-height: 1.3em; }
+  .ed:empty::before { content: "\200B"; }
+  .ed:hover { background: rgba(23,122,154,.07); }
+  .ed:focus { background: rgba(23,122,154,.10); box-shadow: 0 0 0 1.5px rgba(23,122,154,.55); }
+
+  /* The block the Markdown caret is in. */
   #sheet .hl { position: relative; background: #fff4c2 !important;
                outline: 2px solid #f2b705; outline-offset: 1px; border-radius: 2px; }
-  #sheet .hl::after { content: "\25B6"; position: absolute; left: -0.5in;
-                      top: 50%; transform: translateY(-50%); font-size: 11px;
-                      color: #d99a00; }
 
-  /* ----------------------------------------------------------- toolbar */
-  body { display: flex; flex-direction: column; }
-  .layout { flex: 1 1 auto; min-height: 0; height: auto; padding-top: 0; }
-  .toolbar { flex: none; display: flex; align-items: stretch; gap: 14px;
-             margin: 18px 18px 14px; padding: 8px 12px; overflow-x: auto;
-             background: var(--panel); border: 1px solid var(--line);
-             border-radius: 8px; }
-  .tb-group { display: flex; flex-direction: column; gap: 4px; flex: none; }
-  .tb-group + .tb-group { border-left: 1px solid var(--line); padding-left: 14px; }
-  .tb-label { font-size: 10px; font-weight: 600; text-transform: uppercase;
-              letter-spacing: .08em; color: #8a93a0; }
-  .tb-btns { display: flex; gap: 5px; flex-wrap: nowrap; }
-  .tb-btns button { display: flex; flex-direction: column; align-items: flex-start;
-                    gap: 2px; padding: 5px 9px; min-width: 64px; text-align: left;
-                    font-family: var(--body-font); white-space: nowrap; }
-  .tb-btns button:hover { border-color: var(--teal); background: #f2f9fb; }
-  .tb-btns button small { font-family: var(--ui-font); font-size: 10px; color: #8a93a0; }
-  /* Each button is typeset the way its output looks in the document. */
-  .s-name    { font-size: 15pt; font-weight: 700; color: var(--teal); line-height: 1.1; }
-  .s-head    { font-size: 10.5pt; font-weight: 700; color: var(--teal); }
-  .s-line    { font-size: 9.5pt; font-style: italic; color: var(--bronze);
-               border-bottom: 1.5px solid var(--bronze); padding-bottom: 1px; }
-  .s-section { font-size: 10pt; font-weight: 700; text-transform: uppercase; color: var(--teal);
-               border-left: 3px solid var(--bronze); border-bottom: 1px solid var(--teal);
-               padding-left: 5px; }
-  .s-role    { font-size: 10.5pt; font-weight: 700; color: var(--teal); }
-  .s-emp     { font-size: 10pt; font-weight: 700; color: var(--bronze); }
-  .s-ital    { font-size: 9.5pt; font-style: italic; color: var(--grey); }
-  .s-sub     { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; color: var(--bronze);
-               border-left: 2px solid var(--bronze); padding-left: 4px; }
-  .s-call    { font-size: 9.5pt; font-style: italic; color: var(--teal);
-               border-left: 2.5px solid var(--teal); padding-left: 5px; }
-  .s-skill   { font-size: 9pt; background: var(--band); border-left: 2.5px solid var(--bronze);
-               padding: 0 4px 0 5px; }
-  .s-link    { font-size: 10pt; color: var(--link); text-decoration: underline; }
-  .s-bullet  { font-size: 10pt; }
-
-  /* Below this width the three columns stop being readable, so the page
-     becomes an ordinary scrolling document instead. */
+  /* Below this width two columns stop being readable, so the page becomes an
+     ordinary scrolling document instead. */
   @media (max-width: 1100px) {
-    body { overflow: auto; }
-    .layout { flex-direction: column; height: auto; }
-    .panel { flex: none; overflow: visible; }
+    body { overflow: auto; height: auto; }
+    .bar { flex-wrap: wrap; }
+    .layout { flex-direction: column; }
     .col { flex: none; }
-    #editor { height: 45vh; }
+    #editor { height: 40vh; }
     .stage { overflow: visible; }
   }
 </style>
 </head>
 <body>
 
-<div class="toolbar" id="toolbar" role="toolbar" aria-label="Insert resume features">
-  <div class="tb-group">
-    <span class="tb-label">Header (top of page)</span>
-    <div class="tb-btns">
-      <button data-ins="header" title="Name in large teal type, contact line with clickable links, bold headline, and a tagline underlined with a bronze rule. Goes at the very top.">
-        <span class="s-name">Name</span><small>big font + contact</small></button>
-      <button data-ins="header" title="Same header block. The tagline is the italic bronze line with a rule beneath it.">
-        <span class="s-line">Tagline rule</span><small>line under header</small></button>
-      <button data-ins="header" title="Bold teal headline under the contact line.">
-        <span class="s-head">Headline</span><small>bold teal</small></button>
+<details class="flow" id="flow" open>
+  <summary>Workflow<span>where this page sits, and the three programs it becomes</span></summary>
+  <div class="flow-row">
+    <div class="fl-end"><b>Job portals</b>postings</div>
+    <div class="fl-link"><span>posting</span></div>
+
+    <div class="fl-stage">
+      <div class="fl-top"><span class="fl-num">1</span><span class="fl-agent">Quest</span></div>
+      <p class="fl-title">Find the job description</p>
+      <p class="fl-line"><b>Today:</b> search the portals by hand, copy the JD.</p>
+      <p class="fl-line fl-next"><b>Next:</b> a quest finder scours the web for suitable postings.</p>
     </div>
-  </div>
-  <div class="tb-group">
-    <span class="tb-label">Structure</span>
-    <div class="tb-btns">
-      <button data-ins="section" title="Uppercase teal heading with a thick bronze bar on the left and a thin teal line underneath.">
-        <span class="s-section">Section</span><small>bar + line</small></button>
-      <button data-ins="role" title="Job: teal title, then employer (bronze, bold) and dates on one pipe-separated line.">
-        <span class="s-role">Role</span><small>title | employer</small></button>
-      <button data-ins="dates" title="Short italic line right after a role: becomes that job's dates.">
-        <span class="s-ital">Dates</span><small>after a role</small></button>
-      <button data-ins="scope" title="Longer italic grey line: a scope note under a role.">
-        <span class="s-ital">Scope note</span><small>italic grey</small></button>
-      <button data-ins="subhead" title="Small uppercase bronze sub-heading with its own thin bar.">
-        <span class="s-sub">Sub-heading</span><small>bronze bar</small></button>
+    <div class="fl-link"><span>JD</span></div>
+
+    <div class="fl-stage">
+      <div class="fl-top"><span class="fl-num">2</span><span class="fl-agent">Trainer</span></div>
+      <p class="fl-title">Fit analysis and tailored resume</p>
+      <p class="fl-line"><b>Today:</b> an LLM, with <code>resume_prompt_instruction.md</code> as system prompt
+        and <code>master_resume_repository.md</code> as the evidence units.</p>
+      <p class="fl-line fl-next"><b>Next:</b> a hypeman that fits and tailors.</p>
     </div>
-  </div>
-  <div class="tb-group">
-    <span class="tb-label">Content</span>
-    <div class="tb-btns">
-      <button data-ins="bullet" title="Bullet point.">
-        <span class="s-bullet">&bull; Bullet</span><small>plain</small></button>
-      <button data-ins="lbullet" title="Bullet with a bold label in front.">
-        <span class="s-bullet">&bull; <b>Label:</b> text</span><small>labelled bullet</small></button>
-      <button data-ins="callout" title="Italic teal quote with a teal bar on the left. Triggered by starting with 'Guiding Principle'.">
-        <span class="s-call">Callout</span><small>teal bar</small></button>
-      <button data-ins="skills" title="Skills as tinted cards with a bronze edge. Use a two-column table; place under a heading containing 'Skills'.">
-        <span class="s-skill"><b style="color:var(--teal)">Skills</b> card</span><small>tinted rows</small></button>
-      <button data-ins="edu" title="Qualification line: bold teal degree, school and year. Put it under an EDUCATION heading.">
-        <span class="s-role">Education</span><small>degree | school</small></button>
+    <div class="fl-link"><span>resume.md</span></div>
+
+    <div class="fl-stage here">
+      <div class="fl-top"><span class="fl-num">3</span><span class="fl-agent">Dresser</span><span class="fl-here">You are here</span></div>
+      <p class="fl-title">Tidy up the resume</p>
+      <p class="fl-line"><b>Today:</b> this page. Paste the Markdown, fix it on the sheet, download the .docx.</p>
+      <p class="fl-line fl-next"><b>Next:</b> an sophisticateur that preps the application and the interview.</p>
     </div>
+    <div class="fl-link"><span>.docx / PDF</span></div>
+    <div class="fl-end"><b>Apply</b>then interview</div>
   </div>
-  <div class="tb-group">
-    <span class="tb-label">Text (wraps selection)</span>
-    <div class="tb-btns">
-      <button data-wrap="**" title="Bold (Ctrl+B)"><b>Bold</b><small>Ctrl+B</small></button>
-      <button data-wrap="*" title="Italic (Ctrl+I)"><i>Italic</i><small>Ctrl+I</small></button>
-      <button data-ins="link" title="Hyperlink: turns the selection into [text](url). Works anywhere, and in the contact line becomes a clickable link in Word (Ctrl+K)."><span class="s-link">Hyperlink</span><small>Ctrl+K</small></button>
-    </div>
+</details>
+
+<div class="bar" id="bar">
+  <span class="brand">Resume Render</span>
+  <div class="seg" role="group" aria-label="View">
+    <button id="view-split" aria-pressed="true" title="Markdown beside the sheet">Split</button>
+    <button id="view-writer" aria-pressed="false" title="The sheet only. Edit straight on it.">Writer</button>
   </div>
+  <span class="sep"></span>
+  <button class="fmt" data-fmt="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+  <button class="fmt" data-fmt="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+  <button class="fmt" data-fmt="link" title="Hyperlink (Ctrl+K)"><u>Link</u></button>
+  <span class="sep"></span>
+  <button id="open" title="Load a .md file">Open</button>
+  <button id="sample" title="Replace the text with the bundled sample">Sample</button>
+  <span class="spacer"></span>
+  <input type="text" id="role" placeholder="Target role (file name only)" autocomplete="off"
+         title="Only sets the file name. It is not written into the document.">
+  <input type="text" id="filename" autocomplete="off" spellcheck="false"
+         title="File name. Clear the box to track the role again.">
+  <span class="pages" id="pages"></span>
+  <button id="download" disabled>Download .docx</button>
 </div>
 
 <div class="layout">
-  <div class="panel">
-    <h1>Resume Render</h1>
-    <p class="sub">Write Markdown, watch the Word document build. Nothing leaves
-    your browser.</p>
-
-    <h2>Target role</h2>
-    <input type="text" id="role" placeholder="e.g. Deputy Project Manager"
-           autocomplete="off">
-    <p class="field-note">Only sets the file name. It is not written into the
-    document.</p>
-
-    <h2>File name</h2>
-    <input type="text" id="filename" autocomplete="off" spellcheck="false">
-    <p class="field-note" id="filename-note"></p>
-
-    <div class="row">
-      <button id="download" disabled>Download .docx</button>
-    </div>
-
-    <p class="pages" id="pages"></p>
-    <p class="status" id="status"></p>
-  </div>
-
   <div class="col editor-col">
-    <div class="col-head">
-      <span>Markdown</span>
-      <span>
-        <span class="note" id="source"></span>
-        <button id="open" title="Load a .md file into the editor">Open file</button>
-        <button id="sample" title="Replace the editor with the bundled sample">Sample</button>
-      </span>
-    </div>
+    <div class="col-head"><span>Markdown</span><span class="note" id="source"></span></div>
     <textarea id="editor" spellcheck="false"
-              placeholder="Start typing, paste a resume, or drop a .md file here."></textarea>
-    <input type="file" id="file" hidden
-           accept=".md,.markdown,.txt,text/markdown,text/plain">
+              placeholder="Paste the resume Markdown here, or drop a .md file."></textarea>
+    <input type="file" id="file" hidden accept=".md,.markdown,.txt,text/markdown,text/plain">
   </div>
 
   <div class="col stage-col">
-    <div class="col-head"><span>Preview</span><span class="note">A4, live. The highlight follows your cursor</span></div>
+    <div class="col-head"><span>Preview</span><span class="note">A4. Click any text to edit it. Enter adds a bullet.</span></div>
     <div class="stage">
       <div class="scaler" id="scaler">
         <div class="sheet-wrap" id="wrap">
@@ -285,6 +286,8 @@
     </div>
   </div>
 </div>
+
+<p class="status" id="status"></p>
 
 <script src="https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.iife.js"></script>
 <script src="js/parse.js"></script>

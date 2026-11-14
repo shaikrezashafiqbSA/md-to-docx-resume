@@ -3,7 +3,7 @@
  * This reproduces the "teal and bronze" master resume: a Google Docs export
  * with US Letter geometry, Calibri throughout, section headings carried on a
  * thick left bar plus a thin underline, sub-headings on their own left bar,
- * and employer / date details on one pipe-separated line under each role.
+ * and each role on one line: title, employer, then dates at the right margin.
  *
  * The look is fixed. It is length agnostic by construction: nothing here caps
  * or reflows at a page count, so a two-page draft and an eight-page master
@@ -155,26 +155,25 @@
     function blockParagraphs(b) {
       switch (b.t) {
         case 'role': {
-          var out = [para({
-            spacing: { before: 220, after: 20 },
-            keepNext: true, outlineLevel: 1,
-            children: [run({ text: b.role, bold: true, color: C.teal, size: SZ.role })]
-          })];
-          if (b.org || b.dates) {
-            var meta = [];
-            if (b.org) {
-              meta = meta.concat(inlineRuns(b.org,
-                { font: FONT, size: SZ.org, bold: true, color: C.bronze }));
-            }
-            if (b.dates) {
-              meta.push(run({
-                text: (b.org ? '   |   ' : '') + b.dates,
-                size: SZ.org, color: C.grey
-              }));
-            }
-            out.push(para({ spacing: { after: 60 }, keepNext: true, children: meta }));
+          /* One paragraph, so the role costs one line of height: title first
+           * and loudest, employer second, dates on a tab stop at the right
+           * margin. A parser reads it as "Title | Employer<tab>Dates". */
+          var rk = [run({ text: b.role, bold: true, color: C.teal, size: SZ.role })];
+          if (b.org) {
+            rk.push(run({ text: '  |  ', size: SZ.org, color: C.grey }));
+            rk = rk.concat(inlineRuns(b.org,
+              { font: FONT, size: SZ.org, bold: true, color: C.bronze }));
           }
-          return out;
+          if (b.dates) {
+            rk.push(run({ children: [new d.Tab(), b.dates],
+                          size: SZ.context, color: C.grey }));
+          }
+          return [para({
+            spacing: { before: 180, after: 40 },
+            keepNext: true, outlineLevel: 1,
+            tabStops: [{ type: d.TabStopType.RIGHT, position: TEXT_W }],
+            children: rk
+          })];
         }
 
         case 'context':
@@ -252,6 +251,7 @@
         }
 
         case 'bullet': {
+          if (!b.label && !b.text) return [];
           var bkids = [];
           if (b.label) {
             bkids.push(run({ text: b.label + ': ', bold: true, color: C.ink, size: SZ.body }));

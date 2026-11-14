@@ -40,6 +40,20 @@
    * scope note: it names a year, or "Present" / "Ongoing", and little else. */
   var DATE_RE     = /\b(19|20)\d{2}\b|\bpresent\b|\bongoing\b/i;
 
+  /* A date range closing a line: "Jul 2025 to Jul 2026", "2021 - Present". */
+  var MON   = '(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?\\s+)?';
+  var RANGE = MON + '(?:19|20)\\d{2}\\s*(?:to|[–—-])\\s*' + MON +
+              '(?:(?:19|20)\\d{2}|present|ongoing|now)';
+  /* Role lines as language models write them when left alone:
+   *   **Title, Employer**, Jul 2025 to Jul 2026
+   *   Title, Team, Employer, Jul 2025 to Jul 2026
+   * The canonical form is "### Title | Employer | Dates". These two are read
+   * leniently so a drifting draft still renders as a role. */
+  var BOLDROLE_RE  = new RegExp('^\\*\\*(.+?)\\*\\*\\s*[,|]?\\s*(' + RANGE + ')\\.?$', 'i');
+  var PLAINROLE_RE = new RegExp('^([^*]{3,110}?)\\s*[,|]\\s*(' + RANGE + ')$', 'i');
+  /* **Degree**, School, 2020. Optional note. */
+  var EDU2_RE = /^\*\*(.+?)\*\*\s*[,|]\s*(.+?)\s*[,|]\s*((?:19|20)\d{2}(?:\s*(?:to|[–—-])\s*(?:19|20)\d{2})?)\s*(?:[.|]\s*(.+))?$/;
+
   function unescapeMd(s) { return s.replace(ESCAPE_RE, '$1'); }
 
   function stripEmph(s) {
@@ -63,10 +77,25 @@
     return /\bskills?\b|\bcompetenc/i.test(name);
   }
 
-  function splitRole(bold) {
-    var parts = bold.split('|').map(function (p) { return p.trim(); });
-    if (parts.length >= 2) return [parts[0], parts.slice(1).join(' | ')];
-    return [bold.trim(), ''];
+  function isDates(s) { return s.length <= 40 && DATE_RE.test(s); }
+
+  /* "Title | Employer | Dates" -> [title, employer, dates]. The last pipe field
+   * is the dates only when it looks like dates, so "Title | Employer" and
+   * "Title | Employer | Division" still read the way they always did. */
+  function splitRole(text) {
+    var parts = text.split('|').map(function (p) { return p.trim(); })
+      .filter(Boolean);
+    var dates = '';
+    if (parts.length >= 2 && isDates(parts[parts.length - 1])) dates = parts.pop();
+    return [parts[0] || '', parts.slice(1).join(' | '), dates];
+  }
+
+  /* No pipes to go on: the employer is whatever follows the last comma. */
+  function splitRoleLoose(head) {
+    if (head.indexOf('|') !== -1) return splitRole(head);
+    var i = head.lastIndexOf(',');
+    if (i < 0) return [head.trim(), '', ''];
+    return [head.slice(0, i).trim(), head.slice(i + 1).trim(), ''];
   }
 
   function Parser() {
@@ -79,6 +108,7 @@
     this.stage = 0;           // 0 name, 1 contact, 2 headline, 3 subline, 4 body
     this.inEducation = false;
     this.inSkills = false;
+    this.inExperience = false;
     this.pendingRole = null;  // a role block still waiting for its date line
   }
 
@@ -98,6 +128,7 @@
     name = name.trim();
     this.inEducation = /\beducation\b|\bacademic\b/i.test(name);
     this.inSkills = isSkillsHeading(name);
+    this.inExperience = /\bexperience\b|\bemployment\b|\bcareer\b|\bwork history\b/i.test(name);
     this.pendingRole = null;
     /* A repeated heading reopens the section already carrying that text, so a
      * resume split across two "EXPERIENCE" blocks does not render twice. */
@@ -117,7 +148,7 @@
       var label = stripEmph(this.table[i][0]);
       var text = this.table[i][1] || '';
       if (label || text) this.push({ t: 'skill', label: label, text: text,
-                                     line: this.table[i].line });
+                                     table: true, line: this.table[i].line });
     }
     this.table = null;
   };
@@ -125,7 +156,7 @@
   Parser.prototype.addBullet = function (body) {
     var m = LABEL_RE.exec(body);
     if (m && m[2]) {
-      this.push({ t: 'bullet', label: m[1].replace(/:$/, '').trim(),
+      this.push({ t: 'bullet', label: m[1].trim().replace(/:$/, '').trim(),
                   text: m[2].trim() });
     } else {
       this.push({ t: 'bullet', text: body });
@@ -156,6 +187,7 @@
         links.push({ label: lm[1].trim(), url: lm[2] });
       }
       this.header.contactLinks = links;
+      this.header.contactRaw = line;
       this.header.lines.contact = this.ln;
       this.header.contactText = line.replace(LINK_RE, '')
         .replace(/(\s*\|\s*){2,}/g, '  |  ')
@@ -171,6 +203,13 @@
         this.header.headline = m[1].trim();
         this.header.lines.headline = this.ln;
         this.stage = 3;
+        return true;
+      }
+      /* No bold headline: a plain line here is the tagline. */
+      if (!/^[#*|+\-]/.test(line)) {
+        this.header.subline = line;
+        this.header.lines.subline = this.ln;
+        this.stage = 4;
         return true;
       }
       this.stage = 4;
@@ -217,14 +256,21 @@
         var depth = m[1].length, text = stripEmph(m[2]);
         if (depth <= 2) {
           this.addSection(text);
+        } else if (depth === 3 && this.inEducation) {
+          var ep = text.split('|').map(function (p) { return p.trim(); });
+          this.push({ t: 'edu', form: 'atx', degree: ep[0] || '',
+                      school: ep[1] || '', year: ep.slice(2).join(' | ') });
         } else if (depth === 3) {
           var rs = splitRole(text);
-          this.addRole(rs[0], rs[1], '');
+          this.addRole(rs[0], rs[1], rs[2]);
         } else {
           this.push({ t: 'subhead', text: text });
         }
         continue;
       }
+
+      /* A marker with nothing after it yet: a bullet being typed. */
+      if (/^[*+\-]$/.test(line)) { this.push({ t: 'bullet', text: '' }); continue; }
 
       m = BULLET_RE.exec(line);
       if (m) { this.addBullet(m[1].trim()); continue; }
@@ -241,8 +287,26 @@
       if (this.inEducation) {
         m = EDU_RE.exec(line);
         if (m) {
-          this.push({ t: 'edu', degree: m[1].trim(), school: m[2].trim(),
-                      year: m[3].trim() });
+          this.push({ t: 'edu', form: 'dash', degree: m[1].trim(),
+                      school: m[2].trim(), year: m[3].trim() });
+          continue;
+        }
+        m = EDU2_RE.exec(line);
+        if (m) {
+          var edu = { t: 'edu', form: 'comma', degree: m[1].trim(),
+                      school: m[2].trim(), year: m[3].trim() };
+          if (m[4]) { edu.note = m[4].trim(); edu.noteLine = this.ln; }
+          this.push(edu);
+          continue;
+        }
+      }
+
+      if (!this.inEducation) {
+        m = BOLDROLE_RE.exec(line) ||
+            (this.inExperience && line.length <= 150 ? PLAINROLE_RE.exec(line) : null);
+        if (m) {
+          var lr = splitRoleLoose(m[1]);
+          this.addRole(lr[0], lr[1], m[2].trim());
           continue;
         }
       }
@@ -258,7 +322,7 @@
       m = BOLDITAL_RE.exec(line);
       if (m) {
         var r = splitRole(m[1]);
-        this.addRole(r[0], r[1], m[2].trim());
+        this.addRole(r[0], r[1], r[2] || m[2].trim());
         continue;
       }
 
@@ -269,7 +333,7 @@
           this.addSection(bold);
         } else if (bold.indexOf('|') !== -1) {
           var r2 = splitRole(bold);
-          this.addRole(r2[0], r2[1], '');
+          this.addRole(r2[0], r2[1], r2[2]);
         } else {
           this.push({ t: 'para', text: line });
         }
@@ -280,14 +344,14 @@
       if (m) {
         var it = m[1].trim();
         /* Fold a short date-shaped italic line into the role above it. */
-        if (this.pendingRole && it.length <= 60 && DATE_RE.test(it)) {
+        if (this.pendingRole && !this.pendingRole.dates && it.length <= 60 && DATE_RE.test(it)) {
           this.pendingRole.dates = it;
           this.pendingRole = null;
           continue;
         }
         this.push(/^guiding principle/i.test(it)
           ? { t: 'callout', text: it }
-          : { t: 'context', text: it });
+          : { t: 'context', text: it, ital: true });
         continue;
       }
 
@@ -298,6 +362,12 @@
       if (this.inEducation && last && last.t === 'edu' && !last.note) {
         last.note = line;
         last.noteLine = this.ln;
+        continue;
+      }
+
+      /* The paragraph straight under a role line is that role's scope note. */
+      if (last && last.t === 'role') {
+        this.push({ t: 'context', text: line });
         continue;
       }
 
