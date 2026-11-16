@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Document - Resume Render</title>
+<link rel="stylesheet" href="css/shell.css">
+<style>
+  #search { flex: 0 1 320px; }
+  .outline-pane { flex: 0 0 290px; }
+  .cards-pane { flex: 1 1 0; }
+
+  /* ----------------------------------------------------------- outline */
+  .ol { list-style: none; margin: 0; padding: 6px; }
+  .ol li { margin: 0; }
+  .ol a { display: flex; gap: 6px; align-items: baseline; padding: 4px 8px; border-radius: 5px;
+          color: #333; text-decoration: none; font-size: 12.5px; line-height: 1.35; cursor: pointer; }
+  .ol a:hover { background: #f2f9fb; }
+  .ol a.on { background: var(--band); color: #0f5c75; font-weight: 600; }
+  .ol a .n { margin-left: auto; flex: none; font-size: 10.5px; color: var(--faint); font-weight: 400; }
+  .ol .l1 a, .ol .l0 a { font-weight: 600; }
+  .ol .l2 a { padding-left: 8px; }
+  .ol .l3 a { padding-left: 22px; color: #555; }
+  .ol .l4 a, .ol .l5 a, .ol .l6 a { padding-left: 36px; color: var(--muted); font-size: 12px; }
+  .ol .all a { font-weight: 600; border-bottom: 1px solid var(--line); border-radius: 5px 5px 0 0;
+               margin-bottom: 4px; }
+
+  /* ------------------------------------------------------------- cards */
+  #cards { padding: 14px 18px 60px; }
+  .card { position: relative; border: 1px solid var(--line); border-radius: 8px; background: #fff;
+          padding: 10px 14px 11px; margin: 0 0 10px; max-width: 980px; }
+  .card.l1, .card.l2 { border-left: 4px solid var(--bronze); background: #fcfbfa; margin-top: 18px; }
+  .card.l3 { border-left: 4px solid var(--teal); margin-top: 14px; }
+  .card.l4, .card.l5, .card.l6 { margin-left: 18px; }
+  .card:hover { border-color: #b9c0c9; }
+  .card.editing { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(23,122,154,.12); }
+  .crumb { font-size: 10.5px; color: var(--faint); margin-bottom: 3px; }
+  .acts { position: absolute; top: 6px; right: 8px; display: none; gap: 4px; }
+  .card:hover .acts, .card.editing .acts { display: flex; }
+  .acts button { padding: 2px 7px; font-size: 11.5px; }
+  .acts button.danger:hover { border-color: #c0392b; color: #97202a; background: #fdf0f1; }
+
+  .view { cursor: text; font-size: 13.5px; line-height: 1.5; color: var(--ink); overflow-wrap: anywhere; }
+  .view h1, .view h2, .view h3, .view h4, .view h5, .view h6 { margin: 0 0 4px; line-height: 1.3; color: var(--teal); }
+  .view h1 { font-size: 19px; } .view h2 { font-size: 16.5px; } .view h3 { font-size: 14.5px; }
+  .view h4, .view h5, .view h6 { font-size: 13.5px; color: #1d1d1d; }
+  .view p { margin: 0 0 6px; }
+  .view ul { margin: 2px 0 6px; padding-left: 18px; }
+  .view li { margin: 0 0 3px; }
+  .view li.sub { margin-left: 16px; }
+  .view .k { display: inline-block; min-width: 76px; margin-right: 6px; font-size: 11px; font-weight: 700;
+             text-transform: uppercase; letter-spacing: .04em; color: var(--bronze); }
+  .view .tag { display: inline-block; margin: 0 4px 0 0; padding: 0 6px; border-radius: 999px;
+               background: var(--band); color: #0f5c75; font-size: 11px; font-weight: 600; }
+  .view code { font-family: var(--mono-font); font-size: 12px; background: #f1f3f5; border-radius: 3px; padding: 0 3px; }
+  .view pre { font-family: var(--mono-font); font-size: 12px; background: #f6f8fa; border-radius: 6px;
+              padding: 8px 10px; overflow-x: auto; margin: 4px 0 8px; }
+  .view table { border-collapse: collapse; margin: 4px 0 8px; font-size: 12.5px; }
+  .view th, .view td { border: 1px solid var(--line); padding: 3px 8px; text-align: left; vertical-align: top; }
+  .view th { background: #f6f8fa; font-weight: 600; }
+  .view hr { border: 0; border-top: 1px solid var(--line); margin: 8px 0; }
+  .view mark { background: #ffe58a; border-radius: 2px; padding: 0 1px; }
+  .view a { color: var(--link); }
+  .card textarea { width: 100%; display: block; min-height: 90px; }
+  .hint { font-size: 11px; color: var(--faint); margin: 5px 0 0; }
+  #whole { flex: 1 1 auto; width: 100%; border: 0; border-radius: 0 0 8px 8px; padding: 14px 16px; }
+
+  /* ------------------------------------------------ build / enrich dialogs */
+  dialog.sheet { width: min(760px, 94vw); border: 1px solid var(--line); border-radius: 10px;
+                 padding: 0; box-shadow: 0 12px 40px rgba(0,0,0,.22); color: #222; }
+  dialog.sheet::backdrop { background: rgba(20,30,40,.45); }
+  .sheet header { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .sheet header h2 { margin: 0; font-size: 15px; }
+  .sheet header button { margin-left: auto; }
+  .sheet .steps { padding: 4px 16px 16px; }
+  .sheet .step { display: flex; gap: 10px; margin-top: 14px; }
+  .sheet .num { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--bronze);
+                color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; margin-top: 1px; }
+  .sheet .step > div { flex: 1 1 auto; min-width: 0; }
+  .sheet .step h3 { margin: 2px 0 4px; font-size: 13.5px; }
+  .sheet .step p { margin: 0 0 6px; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+  .sheet textarea { width: 100%; height: 110px; display: block; margin-bottom: 6px; }
+  .start-btn { margin-top: 12px; }
+</style>
+</head>
+<body class="kit" data-page="instructions">
+
+<details class="flow" id="flow" open></details>
+
+<div class="bar">
+  <span class="brand" id="title">Document</span>
+  <input type="search" id="search" placeholder="Search" autocomplete="off">
+  <span class="meta" id="count"></span>
+  <span class="spacer"></span>
+  <span class="meta" id="state"></span>
+  <button id="start-btn" hidden title="Build a repository from an existing resume, with any LLM">Start from resume</button>
+  <button id="recall-btn" hidden title="Merge the new and raised evidence units an LLM produced while tailoring">Enrich</button>
+  <span class="sep" id="build-sep" hidden></span>
+  <button id="whole-btn" aria-pressed="false" title="Edit or paste the whole file as one block of Markdown">Whole file</button>
+  <button id="open" title="Load a .md file from your computer into this browser">Open</button>
+  <button id="reset" title="Discard the copy in this browser and load the shipped file again" hidden>Reset</button>
+  <button id="copy" title="Copy the whole document">Copy</button>
+  <button id="save" class="primary" title="Write the document back to a .md file">Save .md</button>
+  <input type="file" id="file" hidden accept=".md,.markdown,.txt,text/markdown,text/plain">
+</div>
+
+<div class="work">
+  <div class="pane outline-pane">
+    <div class="pane-head">Outline</div>
+    <div class="pane-body"><ul class="ol" id="outline"></ul></div>
+  </div>
+  <div class="pane cards-pane">
+    <div class="pane-head"><span id="where">All sections</span>
+      <span class="note">Click a block to edit it. Ctrl+Enter or click away to finish, Esc to cancel.</span></div>
+    <div class="pane-body" id="body"><div id="cards"></div></div>
+    <textarea id="whole" spellcheck="false" hidden></textarea>
+  </div>
+</div>
+
+<dialog class="sheet" id="dlg-start">
+  <header><h2>Start a repository from your resume</h2><button data-close>Close</button></header>
+  <div class="steps">
+    <div class="step"><span class="num">1</span><div>
+      <h3>Paste what you have</h3>
+      <p>Your current resume, in any form. Add a LinkedIn export or old resumes underneath if you have them: more material gives more units.</p>
+      <textarea id="st-resume" spellcheck="false" placeholder="Paste your resume here."></textarea>
+      <button class="primary" id="st-copy">Copy starter prompt + resume</button>
+    </div></div>
+    <div class="step"><span class="num">2</span><div>
+      <h3>Paste it into any LLM</h3>
+      <p>It returns the repository in one block, then 10 recall questions. Answer those later with a Recall round.</p>
+    </div></div>
+    <div class="step"><span class="num">3</span><div>
+      <h3>Bring the repository back</h3>
+      <textarea id="st-result" spellcheck="false" placeholder="Paste the repository the LLM returned."></textarea>
+      <button id="st-load">Load into this page</button>
+    </div></div>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="dlg-recall">
+  <header><h2>Enrich the repository</h2><button data-close>Close</button></header>
+  <div class="steps">
+    <div class="step"><span class="num">1</span><div>
+      <h3>Collect what tailoring turned up</h3>
+      <p>While you tailor a resume, the LLM asks recall questions and your answers raise old claims and uncover new ones. It lists them at the end as the <b>master resume feed</b>. Copy that block from the conversation.</p>
+    </div></div>
+    <div class="step"><span class="num">2</span><div>
+      <h3>Merge it in</h3>
+      <p>A unit whose ID already exists is replaced. A new unit goes to the end of its stack. Anything that is not a unit (a new JD vocabulary mapping, say) is left for you to add by hand.</p>
+      <textarea id="rc-result" spellcheck="false" placeholder="Paste the master resume feed, or any units the LLM returned."></textarea>
+      <button class="primary" id="rc-merge">Merge into repository</button>
+    </div></div>
+    <div class="step"><span class="num" style="background:#b9c0c9">+</span><div>
+      <h3>No tailoring session to hand?</h3>
+      <p>Run a recall round on its own. This copies a prompt with your whole repository; the LLM asks for the 10 facts that would raise the most claims and returns units to merge above.</p>
+      <button id="rc-copy">Copy recall prompt + repository</button>
+    </div></div>
+  </div>
+</dialog>
+
+<script>
+  /* One page serves both documents; the query string says which. */
+  document.body.setAttribute('data-page',
+    new URLSearchParams(location.search).get('d') === 'repository' ? 'repository' : 'instructions');
+</script>
+<script src="js/nav.js"></script>
+<script src="js/md.js"></script>
+<script src="js/doc.js"></script>
+</body>
+</html>

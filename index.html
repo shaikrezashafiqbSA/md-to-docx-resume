@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Resume Render</title>
+<title>Dresser - Resume Render</title>
+<link rel="stylesheet" href="css/shell.css">
 <style>
   /* Palette mirrors js/render.js so the preview and the .docx agree. */
   :root {
@@ -28,59 +29,6 @@
   input[type="text"] { padding: 6px 9px; font: inherit; font-size: 13px; min-width: 0;
     border: 1px solid var(--line); border-radius: 5px; background: #fff; color: #222; }
   input[type="text"]:focus, textarea:focus { outline: 2px solid var(--teal); outline-offset: -1px; }
-
-  /* ---------------------------------------------------------- workflow
-   * Where this page sits in the larger pipeline. Connectors use the same
-   * marching-dash "flow animation" draw.io puts on an edge. */
-  .flow { flex: none; background: var(--panel); border: 1px solid var(--line);
-          border-radius: 8px; }
-  .flow > summary { cursor: pointer; list-style: none; padding: 6px 12px;
-                    font-size: 11px; font-weight: 600; text-transform: uppercase;
-                    letter-spacing: .08em; color: var(--muted); user-select: none; }
-  .flow > summary::-webkit-details-marker { display: none; }
-  .flow > summary::before { content: "\25B8"; display: inline-block; margin-right: 6px;
-                            transition: transform .15s; }
-  .flow[open] > summary::before { transform: rotate(90deg); }
-  .flow > summary span { font-weight: 400; text-transform: none; letter-spacing: 0;
-                         font-size: 11.5px; color: var(--faint); margin-left: 6px; }
-  .flow-row { display: flex; align-items: stretch; gap: 0; padding: 2px 12px 12px;
-              overflow-x: auto; }
-  .fl-end { flex: none; align-self: center; text-align: center; font-size: 11.5px;
-            line-height: 1.3; color: var(--muted); padding: 8px 12px;
-            border: 1px dashed #b9c0c9; border-radius: 999px; background: #fafbfc; }
-  .fl-end b { display: block; color: #333; font-size: 12px; }
-  .fl-stage { flex: 1 1 0; min-width: 215px; border: 1px solid var(--line);
-              border-radius: 8px; padding: 7px 10px 8px; background: #fff;
-              border-top: 3px solid #b9c0c9; }
-  .fl-stage.here { border-color: var(--teal); background: #f2f9fb;
-                   box-shadow: 0 0 0 3px rgba(23,122,154,.12); }
-  .fl-top { display: flex; align-items: center; gap: 6px; }
-  .fl-num { flex: none; width: 18px; height: 18px; border-radius: 50%;
-            background: var(--bronze); color: #fff; font-size: 11px; font-weight: 700;
-            display: grid; place-items: center; }
-  .fl-agent { font-size: 10px; font-weight: 700; letter-spacing: .1em;
-              text-transform: uppercase; color: var(--bronze); }
-  .fl-here { margin-left: auto; font-size: 10px; font-weight: 700; color: #fff;
-             background: var(--teal); border-radius: 999px; padding: 1px 8px; }
-  .fl-title { font-size: 13px; font-weight: 600; color: #222; margin: 3px 0 2px; }
-  .fl-line { font-size: 11.5px; line-height: 1.35; color: var(--muted); margin: 0; }
-  .fl-line b { font-weight: 600; color: #444; }
-  .fl-line code { font-family: var(--mono-font); font-size: 10.5px; color: var(--teal);
-                  background: var(--band); border-radius: 3px; padding: 0 3px; }
-  .fl-next { color: var(--faint); }
-  .fl-link { flex: 0 0 74px; position: relative; align-self: center; height: 34px; }
-  .fl-link span { position: absolute; left: 0; right: 8px; top: 0; text-align: center;
-                  font-size: 10.5px; color: var(--teal); font-family: var(--mono-font);
-                  white-space: nowrap; }
-  .fl-link::before { content: ""; position: absolute; left: 4px; right: 10px; top: 22px;
-                     height: 2px;
-                     background: repeating-linear-gradient(90deg, var(--teal) 0 6px, transparent 6px 11px);
-                     background-size: 11px 2px; animation: flow .55s linear infinite; }
-  .fl-link::after { content: ""; position: absolute; right: 3px; top: 18px;
-                    border: 5px solid transparent; border-left: 8px solid var(--teal);
-                    border-right: 0; }
-  @keyframes flow { to { background-position: 11px 0; } }
-  @media (prefers-reduced-motion: reduce) { .fl-link::before { animation: none; } }
 
   /* --------------------------------------------------------------- bar */
   .bar { flex: none; display: flex; align-items: center; gap: 8px; padding: 7px 10px;
@@ -208,41 +156,9 @@
   }
 </style>
 </head>
-<body>
+<body data-page="dresser">
 
-<details class="flow" id="flow" open>
-  <summary>Workflow<span>where this page sits, and the three programs it becomes</span></summary>
-  <div class="flow-row">
-    <div class="fl-end"><b>Job portals</b>postings</div>
-    <div class="fl-link"><span>posting</span></div>
-
-    <div class="fl-stage">
-      <div class="fl-top"><span class="fl-num">1</span><span class="fl-agent">Quest</span></div>
-      <p class="fl-title">Find the job description</p>
-      <p class="fl-line"><b>Today:</b> search the portals by hand, copy the JD.</p>
-      <p class="fl-line fl-next"><b>Next:</b> a quest finder scours the web for suitable postings.</p>
-    </div>
-    <div class="fl-link"><span>JD</span></div>
-
-    <div class="fl-stage">
-      <div class="fl-top"><span class="fl-num">2</span><span class="fl-agent">Tailor</span></div>
-      <p class="fl-title">Fit analysis and tailored resume</p>
-      <p class="fl-line"><b>Today:</b> an LLM, with <code>resume_prompt_instruction.md</code> as system prompt
-        and <code>master_resume_repository.md</code> as the evidence units.</p>
-      <p class="fl-line fl-next"><b>Next:</b> a hypeman that fits and tailors.</p>
-    </div>
-    <div class="fl-link"><span>resume.md</span></div>
-
-    <div class="fl-stage here">
-      <div class="fl-top"><span class="fl-num">3</span><span class="fl-agent">Dresser</span><span class="fl-here">You are here</span></div>
-      <p class="fl-title">Tidy up the resume</p>
-      <p class="fl-line"><b>Today:</b> this page. Paste the Markdown, fix it on the sheet, download the .docx.</p>
-      <p class="fl-line fl-next"><b>Next:</b> a sophisticateur that preps the application and the interview.</p>
-    </div>
-    <div class="fl-link"><span>.docx / PDF</span></div>
-    <div class="fl-end"><b>Apply</b>then interview</div>
-  </div>
-</details>
+<details class="flow" id="flow" open></details>
 
 <div class="bar" id="bar">
   <span class="brand">Resume Render</span>
@@ -290,6 +206,7 @@
 <p class="status" id="status"></p>
 
 <script src="https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.iife.js"></script>
+<script src="js/nav.js"></script>
 <script src="js/parse.js"></script>
 <script src="js/render.js"></script>
 <script src="js/app.js"></script>

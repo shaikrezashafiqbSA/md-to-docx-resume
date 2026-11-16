@@ -1,23 +1,49 @@
 # Resume Render
 
-Markdown resume in, formatted `.docx` out. Runs as a static page on GitHub Pages.
-No build step, no server, no upload: the file is parsed and the Word document is
-packaged entirely in your browser.
+A job-application workbench that runs as static pages on GitHub Pages. No build
+step, no server, no upload: everything is kept in your browser, and the page
+calls no LLM itself.
 
-## Where it sits
+## The five steps
 
-The strip at the top of the page shows the pipeline this tool is one stage of:
+The strip at the top of every page is the workflow and the navigation:
 
-1. **Quest**: find the job description. Today by hand on the job portals.
-2. **Trainer**: fit analysis and a tailored resume. Today an LLM, with
-   `content/resume_prompt_instruction.md` as its system prompt and
-   `master_resume_repository.md` as the evidence units.
-3. **Dresser**: tidy the resume up for sending. Today this page.
+| # | Page | File | What it does |
+| --- | --- | --- | --- |
+| 0 | Instructions | `doc.html?d=instructions` | The LLM prompt, split into blocks at each heading, with an outline and search. Click a block to edit its Markdown. |
+| 1 | Repository | `doc.html?d=repository` | The master resume repository, the same way: one block per evidence unit, **Add unit** on each stack, search across everything. |
+| 2 | Quests | `quests.html` | Checklist of Singapore public-sector job portals. Tick the ones to check, **Open next ticked** walks through them and stamps each as checked today. |
+| 3 | Tailor | `tailor.html` | Paste a job description, press **Copy prompt package**: instructions + repository + JD in one block for any LLM. Paste the resume it returns and **Open in Dresser**. |
+| 4 | Dresser | `index.html` | Markdown resume in, formatted `.docx` out. |
 
-The roadmap is one platform with a program for each stage. `docs/workflow.drawio`
-holds the same chart for editing in draw.io.
+Instructions and Repository load from `content/` the first time and then live in
+the browser. **Open** loads a file, **Save .md** writes it back (straight to the
+file in Chrome and Edge, a download elsewhere), **Whole file** is for pasting.
+The repository file is private: it is in `.gitignore`, so on the public site the
+Repository page starts empty until you open your own file.
 
-## Use it
+## Starting a repository from nothing
+
+A new user needs only their current resume. On the Repository page:
+
+1. **Start from resume**: paste the resume, copy the starter prompt with it,
+   and paste that into any LLM. The prompt (`content/repository_starter_prompt.md`)
+   has the LLM split the resume into evidence units grouped in stacks, in the
+   format the Repository page reads, without inventing facts. Paste the result
+   back and press **Load into this page**.
+2. **Enrich** (step 5 in the strip, the loop from Tailor back to Repository):
+   while tailoring, the LLM's recall questions and your answers raise old
+   claims and uncover new ones, and it lists them at the end as the master
+   resume feed. Paste that block and **Merge into repository**: a unit whose ID
+   exists is replaced, a new one goes to the end of its stack. With no
+   tailoring session to hand, the same dialog copies
+   `content/repository_recall_prompt.md` with the whole repository for a
+   stand-alone recall round.
+
+Each tailoring session makes the repository richer than the resume it started
+from.
+
+## Use the Dresser
 
 1. Paste the resume Markdown into the left column, or **Open** / drop a `.md`.
 2. Fix it on the sheet. Every piece of text in the preview is editable in

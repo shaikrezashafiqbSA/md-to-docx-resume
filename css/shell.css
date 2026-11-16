@@ -1,0 +1,159 @@
+/* shell.css - shared by every page: palette, the workflow strip that doubles
+ * as navigation, and the plain controls the non-Dresser pages use. */
+:root {
+  --teal: #177A9A; --bronze: #8F6E54; --grey: #595959; --ink: #262626;
+  --band: #E6F2F6; --link: #1155CC;
+  --body-font: Calibri, Carlito, "Segoe UI", system-ui, sans-serif;
+  --ui-font: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono-font: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --shell: #f4f5f7; --panel: #ffffff; --line: #dfe3e8; --muted: #667; --faint: #8a93a0;
+}
+
+/* ------------------------------------------------------------ workflow
+ * Each stage is a link. Connectors use the marching-dash "flow animation"
+ * draw.io puts on an edge. */
+.flow { flex: none; background: var(--panel); border: 1px solid var(--line);
+        border-radius: 8px; }
+.flow > summary { cursor: pointer; list-style: none; padding: 6px 12px;
+                  font-size: 11px; font-weight: 600; text-transform: uppercase;
+                  letter-spacing: .08em; color: var(--muted); user-select: none; }
+.flow > summary::-webkit-details-marker { display: none; }
+.flow > summary::before { content: "\25B8"; display: inline-block; margin-right: 6px;
+                          transition: transform .15s; }
+.flow[open] > summary::before { transform: rotate(90deg); }
+.flow > summary span { font-weight: 400; text-transform: none; letter-spacing: 0;
+                       font-size: 11.5px; color: var(--faint); margin-left: 6px; }
+/* Three rows. The middle one is the main line, steps 0 to 4. Above it sits
+ * the sprout, where a newcomer's repository begins. Below it sits the loop:
+ * tailoring throws off new evidence, which goes back into the repository. */
+.flow-grid { display: grid; padding: 2px 12px 10px; overflow-x: auto;
+             grid-template-columns: minmax(150px, 1fr) 62px minmax(150px, 1fr) 62px
+                                    minmax(150px, 1fr) 62px minmax(150px, 1fr) 62px minmax(150px, 1fr);
+             grid-auto-rows: auto; }
+.fl-stage { min-width: 0; display: block; text-decoration: none;
+            border: 1px solid var(--line); border-top: 3px solid #b9c0c9;
+            border-radius: 8px; padding: 6px 10px 7px; background: #fff; color: inherit; }
+.fl-stage:hover { border-color: var(--teal); background: #f7fbfc; }
+.fl-stage.here { border-color: var(--teal); background: #f2f9fb;
+                 box-shadow: 0 0 0 3px rgba(23,122,154,.12); }
+.fl-top { display: flex; align-items: center; gap: 6px; }
+.fl-num { flex: none; width: 18px; height: 18px; border-radius: 50%;
+          background: var(--bronze); color: #fff; font-size: 11px; font-weight: 700;
+          display: grid; place-items: center; }
+.fl-stage.here .fl-num { background: var(--teal); }
+.fl-name { font-size: 13px; font-weight: 600; color: #222; }
+.fl-line { font-size: 11.5px; line-height: 1.35; color: var(--muted); margin: 3px 0 0; }
+.fl-link { position: relative; align-self: center; height: 34px; }
+.fl-link span { position: absolute; left: 0; right: 8px; top: 0; text-align: center;
+                font-size: 10.5px; color: var(--teal); font-family: var(--mono-font);
+                white-space: nowrap; }
+.fl-link::before { content: ""; position: absolute; left: 4px; right: 10px; top: 22px;
+                   height: 2px;
+                   background: repeating-linear-gradient(90deg, var(--teal) 0 6px, transparent 6px 11px);
+                   background-size: 11px 2px; animation: flow .55s linear infinite; }
+.fl-link::after { content: ""; position: absolute; right: 3px; top: 18px;
+                  border: 5px solid transparent; border-left: 8px solid var(--teal);
+                  border-right: 0; }
+@keyframes flow { to { background-position: 11px 0; } }
+@keyframes flowv { to { background-position: 0 11px; } }
+
+/* The sprout: a small node above Repository with an arrow growing down. */
+.fl-sprout { --go: #3a8f4a; display: flex; flex-direction: column; align-items: center; }
+.fl-sprout a { display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px;
+               border: 1px solid #b9dcc0; border-radius: 999px; background: #f1f9f2;
+               color: #24612f; font-size: 11.5px; font-weight: 600; text-decoration: none;
+               white-space: nowrap; }
+.fl-sprout a:hover { border-color: var(--go); background: #e6f4e8; }
+.fl-sprout .fl-v { position: relative; width: 12px; height: 18px; }
+.fl-sprout .fl-v::before { content: ""; position: absolute; left: 5px; top: 0; bottom: 7px; width: 2px;
+                           background: repeating-linear-gradient(180deg, var(--go) 0 6px, transparent 6px 11px);
+                           background-size: 2px 11px; animation: flowv .55s linear infinite; }
+.fl-sprout .fl-v::after { content: ""; position: absolute; left: 1px; bottom: 0;
+                          border: 5px solid transparent; border-top: 8px solid var(--go); border-bottom: 0; }
+
+/* The loop: Tailor -> Enrich -> Repository, drawn as two elbows in bronze.
+ * Each elbow spans a stage column and the 62px connector column beside it,
+ * so the centre of the stage is (100% - 62px) / 2 from the stage's side. */
+.fl-stage.sub { margin-top: 12px; border-top-color: var(--bronze); }
+.fl-elbow { --c: var(--bronze); --mid: calc((100% - 62px) / 2); --y: calc(50% + 6px);
+            position: relative; min-height: 58px; }
+.fl-elbow::before, .fl-elbow::after { content: ""; position: absolute; }
+.fl-elbow::before { top: var(--y); height: 2px;
+                    background: repeating-linear-gradient(90deg, var(--c) 0 6px, transparent 6px 11px);
+                    background-size: 11px 2px; animation: flow .55s linear infinite reverse; }
+.fl-elbow::after { width: 2px;
+                   background: repeating-linear-gradient(180deg, var(--c) 0 6px, transparent 6px 11px);
+                   background-size: 2px 11px; animation: flowv .55s linear infinite; }
+.fl-elbow i { position: absolute; border: 5px solid transparent; }
+.fl-elbow span { position: absolute; top: calc(var(--y) + 5px); font-size: 10.5px; color: var(--c);
+                 font-family: var(--mono-font); white-space: nowrap; }
+/* down from Tailor, then left into Enrich */
+.fl-elbow.in::after { right: var(--mid); top: 0; height: var(--y); }
+.fl-elbow.in::before { left: 10px; right: var(--mid); }
+.fl-elbow.in i { left: 2px; top: calc(var(--y) - 4px); border-right: 8px solid var(--c); border-left: 0; }
+.fl-elbow.in span { left: 14px; }
+/* left out of Enrich, then up into Repository */
+.fl-elbow.out::before { left: var(--mid); right: 4px; }
+.fl-elbow.out::after { left: var(--mid); top: 9px; height: calc(var(--y) - 7px); animation-direction: reverse; }
+.fl-elbow.out i { left: calc(var(--mid) - 4px); top: 1px; border-bottom: 8px solid var(--c); border-top: 0; }
+.fl-elbow.out span { right: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fl-link::before, .fl-elbow::before, .fl-elbow::after, .fl-sprout .fl-v::before { animation: none; }
+}
+
+[hidden] { display: none !important; }
+
+/* --------------------------------------------------------------- toast */
+.kit-toast { position: fixed; left: 18px; bottom: 14px; z-index: 20; max-width: 520px;
+             font: 12px/1.45 var(--ui-font); border-radius: 6px; padding: 8px 10px;
+             background: #eef9f1; color: #1c6b39; box-shadow: 0 2px 10px rgba(0,0,0,.12); }
+.kit-toast.err { background: #fdf0f1; color: #97202a; }
+
+/* ----------------------------------------------- pages other than Dresser */
+body.kit { margin: 0; height: 100vh; overflow: hidden; background: var(--shell); color: #222;
+           display: flex; flex-direction: column; padding: 12px 18px 18px; gap: 10px;
+           font-family: var(--ui-font); font-size: 14px; }
+body.kit *, body.kit *::before, body.kit *::after { box-sizing: border-box; }
+.kit button, .kit .btn { font: inherit; font-size: 13px; border-radius: 5px; cursor: pointer;
+           border: 1px solid var(--line); background: #fff; padding: 6px 10px;
+           color: #222; white-space: nowrap; text-decoration: none; display: inline-block; }
+.kit button:hover, .kit .btn:hover { border-color: var(--teal); background: #f2f9fb; }
+.kit button.primary { background: var(--teal); color: #fff; border-color: transparent; font-weight: 600; }
+.kit button.primary:hover { background: #126a86; }
+.kit button:disabled { opacity: .5; cursor: not-allowed; }
+.kit input[type="text"], .kit input[type="search"], .kit input[type="url"],
+.kit input[type="number"], .kit select, .kit textarea {
+  font: inherit; font-size: 13px; padding: 6px 9px; min-width: 0; color: #222;
+  border: 1px solid var(--line); border-radius: 5px; background: #fff; }
+.kit input:focus, .kit select:focus, .kit textarea:focus { outline: 2px solid var(--teal); outline-offset: -1px; }
+.kit textarea { font-family: var(--mono-font); font-size: 12.5px; line-height: 1.55; resize: none; }
+
+.bar { flex: none; display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+       background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+.bar .brand { font-size: 14px; font-weight: 700; margin: 0 6px 0 2px; white-space: nowrap; }
+.bar .spacer { flex: 1 1 auto; }
+.bar .sep { width: 1px; align-self: stretch; background: var(--line); margin: 0 4px; }
+.bar .meta { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.bar .meta.warn { color: #9a5b00; }
+
+.work { flex: 1 1 auto; min-height: 0; display: flex; gap: 14px; }
+.pane { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+        min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.pane-head { flex: none; padding: 8px 12px; border-bottom: 1px solid var(--line);
+             font-size: 11px; font-weight: 600; text-transform: uppercase;
+             letter-spacing: .08em; color: var(--muted);
+             display: flex; align-items: center; gap: 8px; }
+.pane-head .note { font-weight: 400; text-transform: none; letter-spacing: 0;
+                   font-size: 11.5px; color: var(--faint); margin-left: auto; }
+.pane-body { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.empty { padding: 28px 22px; color: var(--muted); font-size: 13.5px; line-height: 1.55; max-width: 560px; }
+.empty b { color: #333; }
+
+@media (max-width: 900px) {
+  body.kit { height: auto; overflow: auto; }
+  .bar { flex-wrap: wrap; }
+  .work { flex-direction: column; }
+  .pane { flex: none !important; width: auto !important; }
+  .pane-body { overflow: visible; }
+}

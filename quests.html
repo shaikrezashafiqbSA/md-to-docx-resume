@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quests - Resume Render</title>
+<link rel="stylesheet" href="css/shell.css">
+<style>
+  #keywords { flex: 1 1 260px; max-width: 460px; }
+  .list-pane { flex: 1 1 0; }
+  #groups { padding: 6px 18px 40px; max-width: 1080px; }
+  .group { margin-top: 16px; }
+  .group-head { display: flex; align-items: center; gap: 10px; padding: 0 0 5px;
+                border-bottom: 1px solid var(--teal); }
+  .group-head h2 { margin: 0; font-size: 12px; font-weight: 700; text-transform: uppercase;
+                   letter-spacing: .06em; color: var(--teal); border-left: 3px solid var(--bronze);
+                   padding-left: 7px; }
+  .group-head .n { font-size: 11.5px; color: var(--faint); }
+  .group-head button { margin-left: auto; padding: 2px 8px; font-size: 11.5px; }
+  .row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 4px;
+         border-bottom: 1px solid #eef0f3; }
+  .row:hover { background: #fafcfd; }
+  .row input[type="checkbox"] { margin: 3px 0 0; width: 16px; height: 16px; accent-color: var(--teal);
+                                flex: none; cursor: pointer; }
+  .row .main { flex: 1 1 auto; min-width: 0; }
+  .row .name { font-size: 13.5px; font-weight: 600; color: #222; cursor: pointer; }
+  .row .url { font-size: 11.5px; color: var(--faint); overflow: hidden; text-overflow: ellipsis;
+              white-space: nowrap; }
+  .row .note { font-size: 12px; color: var(--muted); }
+  .row .kw { margin-top: 3px; display: flex; flex-wrap: wrap; gap: 5px; }
+  .row .kw a { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; text-decoration: none;
+               background: var(--band); color: #0f5c75; }
+  .row .kw a:hover { background: #d3e9f0; }
+  .row .seen { flex: none; font-size: 11.5px; color: var(--faint); white-space: nowrap; padding-top: 4px;
+               min-width: 92px; text-align: right; }
+  .row .seen.today { color: #1c6b39; font-weight: 600; }
+  .row .go { flex: none; }
+  .row .x { flex: none; padding: 4px 7px; color: var(--faint); }
+  .row.done .name { color: var(--muted); }
+  .add { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); flex: none; }
+  .add input[type="text"] { flex: 1 1 160px; }
+  .add input[type="url"] { flex: 2 1 260px; }
+</style>
+</head>
+<body class="kit" data-page="quests">
+
+<details class="flow" id="flow" open></details>
+
+<div class="bar">
+  <span class="brand">Quests</span>
+  <input type="text" id="keywords" autocomplete="off"
+         placeholder="Search keywords, comma separated (e.g. change management, programme manager)"
+         title="Portals that support it get a direct search link for each keyword.">
+  <span class="spacer"></span>
+  <span class="meta" id="progress"></span>
+  <button id="none" title="Clear every tick">Untick all</button>
+  <button id="next" class="primary" title="Opens the next ticked portal you have not opened today">Open next ticked</button>
+  <a class="btn" href="tailor.html" title="Found a posting? Paste its job description into Tailor.">Found one: go to Tailor</a>
+</div>
+
+<div class="work">
+  <div class="pane list-pane">
+    <div class="pane-head">Portals to check
+      <span class="note">Tick the ones to check this round. Opening one stamps it as checked today.</span></div>
+    <div class="pane-body"><div id="groups"></div></div>
+    <form class="add" id="add">
+      <input type="text" id="add-name" placeholder="Add a portal: name" required>
+      <input type="url" id="add-url" placeholder="https://…" required>
+      <button type="submit">Add</button>
+    </form>
+  </div>
+</div>
+
+<script src="js/nav.js"></script>
+<script src="js/portals.js"></script>
+<script src="js/quests.js"></script>
+</body>
+</html>

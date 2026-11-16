@@ -43,7 +43,7 @@
 
   var model = null;         // { header, sections }
   var prefs = { role: '', filename: '', filenameEdited: false, md: '',
-                view: 'split', flow: true };
+                view: 'split' };
   var timer = null;
   var prompting = false;
 
@@ -57,7 +57,6 @@
       prefs.filenameEdited = !!saved.filenameEdited;
       prefs.md = typeof saved.md === 'string' ? saved.md : '';
       prefs.view = saved.view === 'writer' ? 'writer' : 'split';
-      prefs.flow = saved.flow !== false;
     } catch (e) { /* private window, cleared storage: defaults are fine */ }
   }
 
@@ -694,8 +693,6 @@
   });
 
   el.flow.addEventListener('toggle', function () {
-    prefs.flow = el.flow.open;
-    savePrefs();
     if (model) fitPreview();
   });
 
@@ -740,7 +737,6 @@
 
   loadPrefs();
   el.role.value = prefs.role;
-  el.flow.open = prefs.flow;
   syncFilename();
   if (prefs.filenameEdited && prefs.filename) el.filename.value = prefs.filename;
   setView(prefs.view);
