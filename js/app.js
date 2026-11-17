@@ -365,7 +365,10 @@
       case 'contact':  return f.text.replace(/\s*\|\s*/g, ' | ');
       case 'headline': return '**' + bare(f.text) + '**';
       case 'section':  return '## ' + f.text;
-      case 'role':     return '### ' + join([f.role, f.org, f.dates]);
+      case 'role':
+        /* A title that holds a pipe is kept in bold so it still reads as one field. */
+        return '### ' + join([f.role.indexOf('|') < 0 ? f.role : '**' + f.role + '**',
+                              f.org, f.dates]);
       case 'context':  return form === 'ital' ? '*' + bare(f.text) + '*' : f.text;
       case 'subhead':  return '#### ' + f.text;
       case 'callout':  return '***' + bare(f.text) + '***';
@@ -374,6 +377,7 @@
         return f.label ? '**' + f.label + '** - ' + f.text : f.text;
       case 'edu':
         if (form === 'atx') return '### ' + join([f.degree, f.school, f.year]);
+        if (form === 'bullet') return '- ' + join([f.degree, f.school, f.year]);
         if (form === 'comma') {
           return '**' + f.degree + '**' + (f.school ? ', ' + f.school : '') +
                  (f.year ? ', ' + f.year : '') + (f.note ? '. ' + f.note : '');

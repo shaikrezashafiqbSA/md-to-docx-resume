@@ -101,9 +101,11 @@ Certificate of Concentration in ...      plain line after  -> its note
 The role line is the one to get right. It prints as a single line: title first
 in bold teal, employer second in bronze, dates at the right margin. Keep it to
 about 85 characters so it does not wrap. Drafts that drift are still read as
-roles: `**Title, Employer**, Jul 2025 to Jul 2026`, the same without bold inside
-an experience section, and `### Title | Employer` followed by an italic date
-line. Editing one on the sheet rewrites it in the canonical form.
+roles: `**Title** | Employer | Jul 2025 – Jul 2026`,
+`**Title, Employer**, Jul 2025 to Jul 2026`, the same without bold inside an
+experience section, and `### Title | Employer` followed by an italic date line.
+Editing one on the sheet rewrites it in the canonical form. In an education
+section, `- Degree | University | 2020` as a bullet is read as a qualification.
 
 Tables are flattened to `Label: items` rows rather than rendered as tables. The
 document is one linear column by design, and text inside a table cell sits

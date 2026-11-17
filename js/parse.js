@@ -51,6 +51,9 @@
    * leniently so a drifting draft still renders as a role. */
   var BOLDROLE_RE  = new RegExp('^\\*\\*(.+?)\\*\\*\\s*[,|]?\\s*(' + RANGE + ')\\.?$', 'i');
   var PLAINROLE_RE = new RegExp('^([^*]{3,110}?)\\s*[,|]\\s*(' + RANGE + ')$', 'i');
+  /* **Title** | Employer | Dates. The bold marks where the title ends, so the
+   * title itself may hold a pipe ("Quantitative Developer | AI Engineer"). */
+  var BOLDPIPE_RE  = /^\*\*(.+?)\*\*\s*\|\s*(.+)$/;
   /* **Degree**, School, 2020. Optional note. */
   var EDU2_RE = /^\*\*(.+?)\*\*\s*[,|]\s*(.+?)\s*[,|]\s*((?:19|20)\d{2}(?:\s*(?:to|[–—-])\s*(?:19|20)\d{2})?)\s*(?:[.|]\s*(.+))?$/;
 
@@ -88,6 +91,22 @@
     var dates = '';
     if (parts.length >= 2 && isDates(parts[parts.length - 1])) dates = parts.pop();
     return [parts[0] || '', parts.slice(1).join(' | '), dates];
+  }
+
+  /* "**Title** | Employer | Dates" -> [title, employer, dates], or null. */
+  function splitBoldRole(text) {
+    var m = BOLDPIPE_RE.exec(text);
+    if (!m) return null;
+    var rest = splitRole('x | ' + m[2]);
+    return [m[1].trim(), rest[1], rest[2]];
+  }
+
+  /* "Degree | School | Year" -> an education block, or null. */
+  function splitEdu(text, form) {
+    var parts = text.split('|').map(function (p) { return p.trim(); });
+    if (parts.length < 2 || !parts[0] || !isDates(parts[parts.length - 1])) return null;
+    return { t: 'edu', form: form, degree: stripEmph(parts[0]),
+             school: parts.slice(1, -1).join(' | '), year: parts[parts.length - 1] };
   }
 
   /* No pipes to go on: the employer is whatever follows the last comma. */
@@ -261,7 +280,7 @@
           this.push({ t: 'edu', form: 'atx', degree: ep[0] || '',
                       school: ep[1] || '', year: ep.slice(2).join(' | ') });
         } else if (depth === 3) {
-          var rs = splitRole(text);
+          var rs = splitBoldRole(m[2].trim()) || splitRole(text);
           this.addRole(rs[0], rs[1], rs[2]);
         } else {
           this.push({ t: 'subhead', text: text });
@@ -273,7 +292,12 @@
       if (/^[*+\-]$/.test(line)) { this.push({ t: 'bullet', text: '' }); continue; }
 
       m = BULLET_RE.exec(line);
-      if (m) { this.addBullet(m[1].trim()); continue; }
+      if (m) {
+        /* A qualification written as a bullet: "- Degree | School | 2020". */
+        var be = this.inEducation ? splitEdu(m[1].trim(), 'bullet') : null;
+        if (be) this.push(be); else this.addBullet(m[1].trim());
+        continue;
+      }
 
       m = TRIBOLD_RE.exec(line);
       if (m) {
@@ -299,9 +323,16 @@
           this.push(edu);
           continue;
         }
+        var pe = line.charAt(0) !== '*' ? splitEdu(line, 'atx') : null;
+        if (pe) { this.push(pe); continue; }
       }
 
       if (!this.inEducation) {
+        var br = splitBoldRole(line);
+        if (br && (br[2] || this.inExperience)) {
+          this.addRole(br[0], br[1], br[2]);
+          continue;
+        }
         m = BOLDROLE_RE.exec(line) ||
             (this.inExperience && line.length <= 150 ? PLAINROLE_RE.exec(line) : null);
         if (m) {
