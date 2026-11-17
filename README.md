@@ -115,6 +115,12 @@ A qualification prints the same way in plain type: degree, university in grey,
 year at the right margin. `### Degree | University | 2020` and
 `**Degree**, University, 2020` are read too.
 
+In a certifications section, `- Certification | Issuer or status | 2025` prints
+the same way. The sentence forms models drift into are read as well:
+`- Name, 2025.`, `- Name, 2026. A note.` and
+`- Name (PMP): exam booked for January 2027.` A certification with no date, or
+with a link or bold in it, stays an ordinary bullet.
+
 Tables are flattened to `Label: items` rows rather than rendered as tables. The
 document is one linear column by design, and text inside a table cell sits
 outside that stream. A `---` thematic-break line is dropped.

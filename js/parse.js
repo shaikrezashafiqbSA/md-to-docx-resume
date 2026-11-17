@@ -113,6 +113,31 @@
              school: parts.slice(1, -1).join(' | '), year: noStop(parts[parts.length - 1]) };
   }
 
+  /* A certification written as a sentence, the way language models do:
+   *   Advanced Data Analytics, Tableau, 2025.
+   *   Adobe Change Management Accelerator Programme, 2026. Applied at NHB.
+   *   Project Management Professional (PMP): exam booked for January 2027.
+   * -> the same block as "Name | Note | Date", so the date sits at the margin. */
+  var MONTH_ = '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?\\s+';
+  var CERT_RE = new RegExp('^(.+?)[,:]?\\s+((?:' + MONTH_ + ')?(?:19|20)\\d{2}\\b' +
+    '(?:\\s*(?:to|[–—-])\\s*(?:(?:' + MONTH_ + ')?(?:19|20)\\d{2}\\b|present|ongoing))?)' +
+    '\\.?(?:\\s+(\\S.*))?$', 'i');
+
+  function splitCert(text) {
+    if (/\]\(|\*\*/.test(text)) return null;      // links and bold stay a bullet
+    var m = CERT_RE.exec(text);
+    if (!m || (m[3] && !/^[A-Z]/.test(m[3]))) return null;
+    var head = m[1].replace(/\s+(?:for|in|on|by|since|from)$/i, '').trim();
+    var name = head, meta = '';
+    var c = head.indexOf(': ');
+    if (c > 0 && /^[a-z]/.test(head.charAt(c + 2))) {   // "Name: exam booked"
+      name = head.slice(0, c);
+      meta = head.slice(c + 2);
+    }
+    if (m[3]) meta = (meta ? meta + '. ' : '') + noStop(m[3]);
+    return { t: 'edu', form: 'bullet', degree: name, school: meta, year: m[2] };
+  }
+
   /* No pipes to go on: the employer is whatever follows the last comma. */
   function splitRoleLoose(head) {
     if (head.indexOf('|') !== -1) return splitRole(head);
@@ -150,6 +175,8 @@
   Parser.prototype.addSection = function (name) {
     name = name.trim();
     this.inEducation = /\beducation\b|\bacademic\b/i.test(name);
+    this.inCerts = !this.inEducation &&
+      /certif|licen[cs]e|professional development|\btraining\b|\bcourses\b/i.test(name);
     this.inSkills = isSkillsHeading(name);
     this.inExperience = /\bexperience\b|\bemployment\b|\bcareer\b|\bwork history\b/i.test(name);
     this.pendingRole = null;
@@ -298,7 +325,9 @@
       m = BULLET_RE.exec(line);
       if (m) {
         /* A qualification written as a bullet: "- Degree | School | 2020". */
-        var be = this.inEducation ? splitEdu(m[1].trim(), 'bullet') : null;
+        var be = this.inEducation || this.inCerts ? splitEdu(m[1].trim(), 'bullet') : null;
+        /* "- Certification, 2025." also gets its date at the margin. */
+        if (!be && this.inCerts) be = splitCert(m[1].trim());
         if (be) this.push(be); else this.addBullet(m[1].trim());
         continue;
       }

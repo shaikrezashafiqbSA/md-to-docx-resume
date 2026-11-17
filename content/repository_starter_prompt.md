@@ -84,6 +84,7 @@ Fixed line shapes for every resume built from this file. The renderer reads them
 * Role line: `**Functional title** | Employer | Mon YYYY to Mon YYYY`. Bold the title only. No full stop inside the bold.
 * Scope note: a plain paragraph on the line under the role line, ending with the reason for leaving.
 * Education line: `- Degree, Major | University | YYYY`. Plain text, no bold.
+* Certification line: `- Certification | Issuer or status | YYYY`. Plain text, no bold. Drop the middle field where there is nothing to say.
 
 ### **Pitch angles**
 
@@ -185,7 +186,7 @@ Tailoring note: write each degree on the resume as its line above, as a bullet.
 
 ### **Certifications and professional development**
 
-* [Certification, issuer, year]
+* [Certification] | [Issuer or status] | [YYYY]
 
 ### **Languages**
 

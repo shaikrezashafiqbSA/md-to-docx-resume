@@ -216,7 +216,7 @@ User returns numbered answers, says "straightaway", or requests a cover letter. 
 
 ## CERTIFICATIONS AND PROFESSIONAL DEVELOPMENT
 
-- [Certification, year.]
+- [Certification] | [Issuer or status] | [YYYY]
 
 ## COMMUNITY ENGAGEMENT
 
@@ -234,9 +234,10 @@ User returns numbered answers, says "straightaway", or requests a cover letter. 
 - Role line: one line with three fields separated by " | ": job title, employer, dates. Bold the job title only, with no full stop inside the bold. Write the employer in plain text. Where a title has two parts, join them with a comma or " - ". Keep the line to about 85 characters so it prints on one line.  
 - Scope note: a plain paragraph on the line directly under its role line. The bullets follow with no blank line between.  
 - Education line: a bullet with three fields separated by " | ": degree, university, year. Plain text, no bold, no full stop after the year.  
+- Certification line: a bullet with fields separated by " | ": certification, then issuer or status where there is one, then the year (or month and year for a booked exam). Plain text, no bold, no full stop after the date. A certification with no date stays a plain bullet.  
 - Section headings: "## " and capitals, in the order above. Heading 2 may name the employer ("WHO I AM & THE VALUE I BRING TO [EMPLOYER]").  
 - Bold appears in three places only: the tagline, the job titles, and the bullet labels in sections 2 and 3.  
-- The pipes in the contact, role and education lines are layout marks. The punctuation rule covers the sentences, and these lines keep their pipes.
+- The pipes in the contact, role, education and certification lines are layout marks. The punctuation rule covers the sentences, and these lines keep their pipes.
 
 **Structure rules:**
 
@@ -272,7 +273,7 @@ Verify before sending Turn 3:
 - [ ] Keywords woven naturally, exact JD phrasing and JD spelling where used  
 - [ ] Every supersession and new vocabulary mapping is logged in the master resume feed  
 - [ ] Markdown is ATS-safe per the rules above  
-- [ ] Every line matches the format contract: contact line, bold tagline, role lines with only the job title in bold, education lines  
+- [ ] Every line matches the format contract: contact line, bold tagline, role lines with only the job title in bold, education and certification lines  
 - [ ] Length \= 2 pages; trim order respected  
 - [ ] Contact details and personal data match the identity block  
 - [ ] All compulsory links present, in markdown link format, with exact URLs
