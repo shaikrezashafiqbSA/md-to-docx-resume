@@ -51,11 +51,17 @@
     /* Park backslash-escaped characters so they cannot open a mark. */
     var s = text.replace(ESC_RE, function (m, c) { return '\u0001' + c.charCodeAt(0) + '\u0002'; });
     s = escHtml(s);
-    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    /* Park code spans too: what is inside one is shown as typed, marks and all. */
+    var codes = [];
+    s = s.replace(/`([^`]+)`/g, function (m, c) {
+      codes.push(c);
+      return '\u0003' + (codes.length - 1) + '\u0004';
+    });
     s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
     s = s.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
     s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/\*([^*\s][^*]*)\*/g, '<em>$1</em>');
+    s = s.replace(/\u0003(\d+)\u0004/g, function (m, n) { return '<code>' + codes[+n] + '</code>'; });
     return s.replace(/\u0001(\d+)\u0002/g, function (m, n) {
       return escHtml(String.fromCharCode(+n));
     });

@@ -75,13 +75,23 @@ Role prefixes: [PFX (Employer), PFX (Employer), XR (cross-role), EDU (education)
 
 Each role records a contracted title and a functional title. Application forms carry the contracted title. The resume and duties text carry the functional title, reframed to the functional role closest to the JD.
 
+### **Resume line formats**
+
+Fixed line shapes for every resume built from this file. The renderer reads them.
+
+* Contact line: `[Citizenship] | email | [linkedin](URL) | [portfolio](URL)`. Citizenship first, on one line, with the links from the identity block.
+* Tagline: one bold line under the contact line. Take the headline of the chosen pitch angle and end each phrase with a full stop.
+* Role line: `**Functional title** | Employer | Mon YYYY to Mon YYYY`. Bold the title only. No full stop inside the bold.
+* Scope note: a plain paragraph on the line under the role line, ending with the reason for leaving.
+* Education line: `- Degree, Major | University | YYYY`. Plain text, no bold.
+
 ### **Pitch angles**
 
 [2 to 4] approved angles for "Who I Am & The Value I Bring". Adapt one per application. Every fact traces to a unit.
 
 | Angle | Headline | Pitch |
 | :---- | :---- | :---- |
-| [Angle name] | [Role · Strength · Strength · Strength] | [2 to 3 sentences. Which result leads, which follows, and what it adds up to.] |
+| [Angle name] | [Role. Strength. Strength. Strength.] | [2 to 3 sentences. Which result leads, which follows, and what it adds up to.] |
 
 ## **Competency taxonomy**
 
@@ -168,7 +178,10 @@ Resume scope note: [2 to 3 sentences on the remit: what the role was hired to do
 
 ### **Education (canonical, fullest version)**
 
-* [Degree, Major] | [University] | [YYYY]. [Honours, concentration, thesis.]
+[Degree, Major] | [University] | [YYYY]
+[Honours, concentration, thesis, on the line below. Leave the line out if there is none.]
+
+Tailoring note: write each degree on the resume as its line above, as a bullet.
 
 ### **Certifications and professional development**
 

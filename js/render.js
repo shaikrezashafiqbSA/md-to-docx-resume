@@ -28,8 +28,8 @@
   };
 
   var C = {
-    teal:   '177A9A',   // name, headline, section + role titles, degree, skill label
-    bronze: '8F6E54',   // left bars, sub-headings, employer, subline accent
+    teal:   '177A9A',   // name, section + role titles, skill label
+    bronze: '8F6E54',   // left bars, sub-headings, employer, tagline
     grey:   '595959',   // contact, dates, role context
     ink:    '262626',   // body copy and bullet labels
     link:   '1155CC',
@@ -115,11 +115,15 @@
     }
 
     if (head.headline) {
-      children.push(para({
-        spacing: { after: 20 },
+      /* With no italic line under it, the tagline carries the rule that
+       * closes the header. */
+      children.push(para(assign(head.subline ? { spacing: { after: 20 } } : {
+        spacing: { after: 160 },
+        border: { bottom: { style: S, size: 12, color: C.bronze, space: 6 } }
+      }, {
         children: inlineRuns(head.headline,
-          { font: FONT, size: SZ.headline, bold: true, color: C.teal })
-      }));
+          { font: FONT, size: SZ.headline, bold: true, color: C.bronze })
+      })));
     }
     if (head.subline) {
       children.push(para({
@@ -230,17 +234,21 @@
         }
 
         case 'edu': {
-          var eduMeta = [run({ text: b.degree, bold: true, color: C.teal, size: SZ.eduDegree })];
-          var tail = [];
-          if (b.school) tail.push(b.school);
-          if (b.year) tail.push(b.year);
-          if (tail.length) {
-            eduMeta.push(run({
-              text: '   |   ' + tail.join('   |   '),
-              size: SZ.eduMeta, color: C.grey
-            }));
+          /* Same shape as a role line, in plain type: degree, university,
+           * then the year on the right tab stop. */
+          var eduMeta = [run({ text: b.degree, color: C.ink, size: SZ.eduDegree })];
+          if (b.school) {
+            eduMeta.push(run({ text: '  |  ' + b.school, size: SZ.eduMeta, color: C.grey }));
           }
-          var eduOut = [para({ spacing: { after: b.note ? 10 : 100 }, children: eduMeta })];
+          if (b.year) {
+            eduMeta.push(run({ children: [new d.Tab(), b.year],
+                               size: SZ.context, color: C.grey }));
+          }
+          var eduOut = [para({
+            spacing: { after: b.note ? 10 : 60 },
+            tabStops: [{ type: d.TabStopType.RIGHT, position: TEXT_W }],
+            children: eduMeta
+          })];
           if (b.note) {
             eduOut.push(para({
               spacing: { after: 100, line: 264 },

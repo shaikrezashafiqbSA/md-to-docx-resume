@@ -141,15 +141,18 @@
     });
   }
 
-  /* -> Promise<{ md, name, dirty } | null>: the browser's copy, else the seed. */
+  /* -> Promise<{ md, name, dirty, seed } | null>: the browser's copy, else the
+   * seed. A copy that came from the shipped file and was never edited follows
+   * the shipped file, so a change to the file shows up without a Reset. */
   function getDoc(kind) {
-    var rec = load(DOCS[kind].key, null);
-    if (rec && typeof rec.md === 'string' && rec.md.trim()) return Promise.resolve(rec);
+    var old = load(DOCS[kind].key, null);
+    var has = !!(old && typeof old.md === 'string' && old.md.trim());
+    if (has && !(old.seed && !old.dirty)) return Promise.resolve(old);
     return fetchSeed(kind).then(function (md) {
-      rec = { md: md, name: DOCS[kind].file, dirty: false };
+      var rec = { md: md, name: DOCS[kind].file, dirty: false, seed: true };
       save(DOCS[kind].key, rec);
       return rec;
-    }).catch(function () { return null; });
+    }).catch(function () { return has ? old : null; });
   }
 
   global.Kit = { DOCS: DOCS, getDoc: getDoc, fetchSeed: fetchSeed, esc: esc, load: load, save: save, toast: toast, copy: copy,

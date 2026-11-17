@@ -64,6 +64,7 @@
   function persist() {
     rec.md = Md.join(list);
     rec.dirty = true;
+    rec.seed = false;                 // now the user's own, not the shipped file
     Kit.save(cfg.key, rec);
   }
 
@@ -78,7 +79,8 @@
       if (deep && !(i > openFrom && i < openTo)) return;
       var kids = sectionEnd(i) - i - 1;
       html += '<li class="l' + c.level + '"><a data-i="' + i + '"' +
-              (i === view && !query ? ' class="on"' : '') + '>' + Kit.esc(label(c)) +
+              (i === view && !query ? ' class="on"' : '') + ' title="' + Kit.esc(label(c)) + '">' +
+              '<span class="t">' + Kit.esc(label(c)) + '</span>' +
               (kids && !deep ? '<span class="n">' + kids + '</span>' : '') + '</a></li>';
     });
     el.outline.innerHTML = html;
@@ -287,8 +289,8 @@
 
   /* ----------------------------------------------------------------- file */
 
-  function loaded(md, name) {
-    rec = { md: md, name: name || cfg.file, dirty: false };
+  function loaded(md, name, seed) {
+    rec = { md: md, name: name || cfg.file, dirty: false, seed: !!seed };
     Kit.save(cfg.key, rec);
     query = ''; el.search.value = '';
     setMd(md, false);
@@ -405,6 +407,7 @@
     clearTimeout(wholeTimer);
     wholeTimer = setTimeout(function () {
       rec.md = el.whole.value;
+      rec.seed = false;
       rec.dirty = true;
       Kit.save(cfg.key, rec);
       setMd(rec.md, false);
@@ -429,7 +432,7 @@
   });
   el.reset.addEventListener('click', function () {
     if (!window.confirm('Replace the copy in this browser with the shipped ' + cfg.file + '? Your edits here are lost unless you saved them to a file.')) return;
-    Kit.fetchSeed(kind).then(function (md) { handle = null; loaded(md, cfg.file); Kit.toast('Reloaded ' + cfg.file); })
+    Kit.fetchSeed(kind).then(function (md) { handle = null; loaded(md, cfg.file, true); Kit.toast('Reloaded ' + cfg.file); })
       .catch(function () { Kit.toast('There is no shipped copy to reload.', 'err'); });
   });
 

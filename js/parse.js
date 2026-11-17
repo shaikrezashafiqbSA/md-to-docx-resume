@@ -47,8 +47,9 @@
   /* Role lines as language models write them when left alone:
    *   **Title, Employer**, Jul 2025 to Jul 2026
    *   Title, Team, Employer, Jul 2025 to Jul 2026
-   * The canonical form is "### Title | Employer | Dates". These two are read
-   * leniently so a drifting draft still renders as a role. */
+   * The canonical form is "**Title** | Employer | Dates", and "### Title |
+   * Employer | Dates" is read the same way. These two are read leniently so a
+   * drifting draft still renders as a role. */
   var BOLDROLE_RE  = new RegExp('^\\*\\*(.+?)\\*\\*\\s*[,|]?\\s*(' + RANGE + ')\\.?$', 'i');
   var PLAINROLE_RE = new RegExp('^([^*]{3,110}?)\\s*[,|]\\s*(' + RANGE + ')$', 'i');
   /* **Title** | Employer | Dates. The bold marks where the title ends, so the
@@ -98,15 +99,18 @@
     var m = BOLDPIPE_RE.exec(text);
     if (!m) return null;
     var rest = splitRole('x | ' + m[2]);
-    return [m[1].trim(), rest[1], rest[2]];
+    return [noStop(m[1]), rest[1], rest[2]];
   }
+
+  /* A title or a year is a field, not a sentence: drop a closing full stop. */
+  function noStop(s) { return s.trim().replace(/\s*\.$/, ''); }
 
   /* "Degree | School | Year" -> an education block, or null. */
   function splitEdu(text, form) {
     var parts = text.split('|').map(function (p) { return p.trim(); });
     if (parts.length < 2 || !parts[0] || !isDates(parts[parts.length - 1])) return null;
     return { t: 'edu', form: form, degree: stripEmph(parts[0]),
-             school: parts.slice(1, -1).join(' | '), year: parts[parts.length - 1] };
+             school: parts.slice(1, -1).join(' | '), year: noStop(parts[parts.length - 1]) };
   }
 
   /* No pipes to go on: the employer is whatever follows the last comma. */
@@ -182,8 +186,8 @@
     }
   };
 
-  Parser.prototype.addRole = function (role, org, dates) {
-    var block = { t: 'role', role: role, org: org, dates: dates || '' };
+  Parser.prototype.addRole = function (role, org, dates, form) {
+    var block = { t: 'role', role: role, org: org, dates: dates || '', form: form || '' };
     this.push(block);
     this.pendingRole = block;   // set after push, which would otherwise clear it
   };
@@ -278,10 +282,10 @@
         } else if (depth === 3 && this.inEducation) {
           var ep = text.split('|').map(function (p) { return p.trim(); });
           this.push({ t: 'edu', form: 'atx', degree: ep[0] || '',
-                      school: ep[1] || '', year: ep.slice(2).join(' | ') });
+                      school: ep[1] || '', year: noStop(ep.slice(2).join(' | ')) });
         } else if (depth === 3) {
           var rs = splitBoldRole(m[2].trim()) || splitRole(text);
-          this.addRole(rs[0], rs[1], rs[2]);
+          this.addRole(rs[0], rs[1], rs[2], 'atx');
         } else {
           this.push({ t: 'subhead', text: text });
         }

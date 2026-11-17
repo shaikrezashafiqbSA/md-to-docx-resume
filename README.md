@@ -51,6 +51,9 @@ from.
    the next bullet; Backspace in an empty bullet removes it. **B**, **I** and
    **Link** (Ctrl+B, Ctrl+I, Ctrl+K) work on the sheet and in the Markdown.
 3. **Writer** hides the Markdown and leaves the sheet. **Split** brings it back.
+   In Split the two columns follow each other: click text on the sheet and its
+   Markdown line scrolls into view under a yellow band; put the caret in the
+   Markdown and its block is marked on the sheet.
 4. Optionally type a **target role**. It only shapes the file name, which
    defaults to `Shaik_Reza_Shafiq_Resume_<role>.docx`.
 5. Press **Download .docx**.
@@ -82,30 +85,35 @@ CommonMark. Both work.
 
 ```
 # Shaik Reza Shafiq                      first line        -> name
-email | [linkedin](url) | [github](url)  next line         -> contact
-Target role: strength, strength          next plain line   -> tagline
-                                         (a **bold** line first -> headline)
+Singapore Citizen | email | [linkedin](url) | [github](url)   next line -> contact
+**Role. Strength. Strength.**            bold line         -> tagline, in bronze
+                                         (a plain line here is an italic tagline)
 
 ## PROFESSIONAL EXPERIENCE               # / ## / ALL-CAPS -> section heading
-### Role Title | Employer | Jul 2025 to Jul 2026           -> job, on one line
+**Role Title** | Employer | Jul 2025 to Jul 2026           -> job, on one line
 Recruited to reverse a stalled ...       paragraph under a job -> scope note
 - **Label:** body text                                    -> bullet with label
 #### Adoption Recovery & Outcomes        #### / ***...***  -> sub-heading
 | Category | items |                     two-column table  -> skill card
 
 ## EDUCATION
-### Degree, Major | University | 2020                      -> qualification
+- Degree, Major | University | 2020                        -> qualification
 Certificate of Concentration in ...      plain line after  -> its note
 ```
 
 The role line is the one to get right. It prints as a single line: title first
 in bold teal, employer second in bronze, dates at the right margin. Keep it to
-about 85 characters so it does not wrap. Drafts that drift are still read as
-roles: `**Title** | Employer | Jul 2025 – Jul 2026`,
+about 85 characters so it does not wrap. A closing full stop inside the bold
+title is dropped. Drafts that drift are still read as roles:
+`### Title | Employer | Jul 2025 to Jul 2026`,
 `**Title, Employer**, Jul 2025 to Jul 2026`, the same without bold inside an
 experience section, and `### Title | Employer` followed by an italic date line.
-Editing one on the sheet rewrites it in the canonical form. In an education
-section, `- Degree | University | 2020` as a bullet is read as a qualification.
+Editing one on the sheet rewrites it as `**Title** | Employer | Dates`, or
+keeps the `###` if it was written with one.
+
+A qualification prints the same way in plain type: degree, university in grey,
+year at the right margin. `### Degree | University | 2020` and
+`**Degree**, University, 2020` are read too.
 
 Tables are flattened to `Label: items` rows rather than rendered as tables. The
 document is one linear column by design, and text inside a table cell sits

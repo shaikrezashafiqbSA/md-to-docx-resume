@@ -21,6 +21,8 @@
 
   var el = {
     editor:   document.getElementById('editor'),
+    band:     document.getElementById('md-band'),
+    mirror:   document.getElementById('md-mirror'),
     file:     document.getElementById('file'),
     open:     document.getElementById('open'),
     sample:   document.getElementById('sample'),
@@ -146,7 +148,7 @@
   function blockHtml(b) {
     switch (b.t) {
       case 'role':
-        return P('r-role', b.line, 'role', '',
+        return P('r-role', b.line, 'role', b.form || '',
           '<span>' + F('role', esc(b.role), { plain: true, cls: 'r-title' }) +
           (b.org ? '<span class="r-pipe">  |  </span>' +
                    F('org', inlineHtml(b.org), { cls: 'r-emp' }) : '') + '</span>' +
@@ -168,11 +170,13 @@
           F('text', inlineHtml(b.text)));
       }
       case 'edu': {
-        var e = F('degree', esc(b.degree), { plain: true, cls: 'r-deg' });
+        /* Laid out like a role line, in quieter type: degree, university,
+         * then the year at the right margin. */
+        var e = '<span>' + F('degree', esc(b.degree), { plain: true, cls: 'r-deg' });
         if (b.school) e += '<span class="r-edu-meta">' + PIPE + '</span>' +
                            F('school', esc(b.school), { plain: true, cls: 'r-edu-meta' });
-        if (b.year) e += '<span class="r-edu-meta">' + PIPE + '</span>' +
-                         F('year', esc(b.year), { plain: true, cls: 'r-edu-meta' });
+        e += '</span>';
+        if (b.year) e += F('year', esc(b.year), { plain: true, cls: 'r-dates' });
         var out = P('r-edu', b.line, 'edu', b.form || 'dash', e);
         if (b.note) {
           /* A note written on the degree's own line is written back with it. */
@@ -199,7 +203,7 @@
       out += P('r-contact', hl.contact, 'contact', '',
                F('text', inlineHtml(h.contactRaw.replace(/\s*\|\s*/g, '   |   ')), { blk: true }));
     }
-    if (h.headline) out += P('r-headline', hl.headline, 'headline', '', F('text', inlineHtml(h.headline), { blk: true }));
+    if (h.headline) out += P('r-headline' + (h.subline ? '' : ' end'), hl.headline, 'headline', '', F('text', inlineHtml(h.headline), { blk: true }));
     if (h.subline) out += P('r-subline', hl.subline, 'para', '', F('text', inlineHtml(h.subline), { blk: true }));
 
     skillTick = 0;
@@ -292,6 +296,58 @@
     }
   }
 
+  /* ---------------------------------------------------------- source line
+   * The other direction: text clicked on the sheet is marked in the Markdown
+   * column with a band over its source line, scrolled into view. The line is
+   * measured on a hidden copy of the text, because long lines wrap and a
+   * textarea cannot say where one sits. */
+
+  var band = { line: -1, top: 0, height: 0 };
+
+  function measureLine(n) {
+    var lines = el.editor.value.split('\n');
+    if (n < 0 || n >= lines.length) return null;
+    var pre = document.createElement('div'), cur = document.createElement('div');
+    /* Every line ends in a newline, so trailing blank lines keep their height. */
+    pre.textContent = n ? lines.slice(0, n).join('\n') + '\n' : '';
+    cur.textContent = lines[n] || '​';
+    el.mirror.style.width = el.editor.clientWidth + 'px';
+    el.mirror.textContent = '';
+    el.mirror.appendChild(pre);
+    el.mirror.appendChild(cur);
+    var box = { top: cur.offsetTop, height: cur.offsetHeight };
+    el.mirror.textContent = '';
+    return box;
+  }
+
+  function placeBand() {
+    if (band.line < 0) return;
+    el.band.style.width = el.editor.clientWidth + 'px';
+    el.band.style.height = band.height + 'px';
+    el.band.style.transform = 'translateY(' +
+      (el.editor.clientTop + band.top - el.editor.scrollTop) + 'px)';
+  }
+
+  function hideSource() {
+    band.line = -1;
+    el.band.hidden = true;
+  }
+
+  function showSource(n, scroll) {
+    var box = document.body.classList.contains('writer') ? null : measureLine(n);
+    if (!box) { hideSource(); return; }
+    band.line = n;
+    band.top = box.top;
+    band.height = box.height;
+    var ed = el.editor;
+    if (scroll && (box.top < ed.scrollTop + 8 ||
+                   box.top + box.height > ed.scrollTop + ed.clientHeight - 8)) {
+      ed.scrollTop = Math.max(0, box.top - ed.clientHeight / 3);
+    }
+    el.band.hidden = false;
+    placeBand();
+  }
+
   /* --------------------------------------------------------------- render */
 
   function reparse() {
@@ -366,9 +422,13 @@
       case 'headline': return '**' + bare(f.text) + '**';
       case 'section':  return '## ' + f.text;
       case 'role':
-        /* A title that holds a pipe is kept in bold so it still reads as one field. */
-        return '### ' + join([f.role.indexOf('|') < 0 ? f.role : '**' + f.role + '**',
-                              f.org, f.dates]);
+        /* Bold title, employer, dates. A line written as a "###" heading stays
+         * one, and there the bold is only needed when the title holds a pipe. */
+        if (form === 'atx' && f.role.indexOf('|') < 0) {
+          return '### ' + join([f.role, f.org, f.dates]);
+        }
+        return (form === 'atx' ? '### ' : '') +
+               join([f.role ? '**' + f.role + '**' : '', f.org, f.dates]);
       case 'context':  return form === 'ital' ? '*' + bare(f.text) + '*' : f.text;
       case 'subhead':  return '#### ' + f.text;
       case 'callout':  return '***' + bare(f.text) + '***';
@@ -420,6 +480,7 @@
     setLine(n, lineMd(kind, form, f));
     model = window.ResumeParse.parse(el.editor.value);
     el.source.textContent = 'edited on the sheet';
+    if (band.line >= 0) showSource(n, false);   // the line may now wrap differently
     measurePages();
     fitPreview();
   }
@@ -542,19 +603,22 @@
   });
   el.sheet.addEventListener('drop', function (e) { e.preventDefault(); });
 
-  /* Entering a field brings its line into view in the Markdown column. */
+  /* Entering a field, or clicking anywhere on a block, marks its line in the
+   * Markdown column and brings it into view. */
   el.sheet.addEventListener('focusin', function (e) {
     var n = lineOf(e.target);
-    if (n < 0 || document.body.classList.contains('writer')) return;
-    var total = el.editor.value.split('\n').length || 1;
-    el.editor.scrollTop = Math.max(0,
-      (n / total) * el.editor.scrollHeight - el.editor.clientHeight / 2);
+    if (n >= 0) showSource(n, true);
+  });
+  el.sheet.addEventListener('click', function (e) {
+    var n = lineOf(e.target);
+    if (n >= 0 && n !== band.line) showSource(n, true);
   });
 
   /* Leaving the sheet rebuilds it from the Markdown, which settles anything
    * the edit changed structurally (a line that is now a different block). */
   el.sheet.addEventListener('focusout', function (e) {
     if (prompting || (e.relatedTarget && el.sheet.contains(e.relatedTarget))) return;
+    hideSource();
     if (model) reparse();
   });
 
@@ -599,6 +663,8 @@
 
   el.editor.addEventListener('input', scheduleReparse);
   el.editor.addEventListener('blur', clearHighlight);
+  el.editor.addEventListener('focus', hideSource);
+  el.editor.addEventListener('scroll', placeBand);
   document.addEventListener('selectionchange', function () {
     if (document.activeElement === el.editor && model) syncHighlight(true);
   });
@@ -681,6 +747,7 @@
     el.vSplit.setAttribute('aria-pressed', String(prefs.view === 'split'));
     el.vWriter.setAttribute('aria-pressed', String(prefs.view === 'writer'));
     savePrefs();
+    hideSource();
     if (model) { measurePages(); fitPreview(); }
   }
 
@@ -719,6 +786,7 @@
   el.download.addEventListener('click', download);
   window.addEventListener('resize', function () {
     if (model) { measurePages(); fitPreview(); }
+    if (band.line >= 0) showSource(band.line, false);
   });
 
   /* ---------------------------------------------------------------- start */

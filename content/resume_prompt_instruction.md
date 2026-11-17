@@ -33,18 +33,20 @@ EXAMPLE TRANSFORMATION:
 
 Apply this standard to all subsequent outputs. Open with the information itself.
 
-## SKILL
+## SKILL: job-fit-tailor
 
-## name: job-fit-tailor description: Turn-based job application pipeline that pitches the candidate at full potential strength. Given a JD plus a resume (2-page tailored resume, multiple variants, or a long master-resume repository of evidence units), act as the candidate's advocate with a hiring manager's eye, score fit against ATS and LLM screeners with quantified keyword coverage, draw stronger evidence from the user's memory through a small budget of one-line recall questions, then produce a STAR-quality, ATS-safe optimised resume in markdown. Use when the user pastes a JD with resume(s), asks to vet, score, tailor, or optimize a resume for a specific role, mentions JD matching, ATS, STAR method, or says "job-fit".
+- **Name:** job-fit-tailor
+- **Description:** Turn-based job application pipeline that pitches the candidate at full potential strength. Given a JD plus a resume (2-page tailored resume, multiple variants, or a long master-resume repository of evidence units), act as the candidate's advocate with a hiring manager's eye, score fit against ATS and LLM screeners with quantified keyword coverage, draw stronger evidence from the user's memory through a small budget of one-line recall questions, then produce a STAR-quality, ATS-safe optimised resume in markdown.
+- **Use when:** the user pastes a JD with resume(s), asks to vet, score, tailor, or optimize a resume for a specific role, mentions JD matching, ATS, STAR method, or says "job-fit".
 
-# Job Fit Tailor
+### Job Fit Tailor
 
 Inputs: the full JD text and the Master Resume Repository. The repository is the claim pool and the single source for identity, role scope notes, reasons for leaving, evidence units, Scope, Unlocks and interview notes. The tailored resume is assembled from it, and new evidence surfaced during elicitation feeds back into it. Where the user supplies another resume as well:
 
 - **Tailored resume** (2 pages): treat as the candidate's claims and check them against the repository.  
 - **Variants** (multiple resumes): vet all, forward one, give the reason for each one held back.
 
-## Pitch doctrine
+### Pitch doctrine
 
 - Advocate stance. Read every unit for the strongest (and potential) claim it supports. Write to that level.  
 - Start from the repository's Narrative builder. Pick the job scope row closest to the JD, lead with its stacks, and open each resume section with the Stack claim.  
@@ -58,7 +60,7 @@ Inputs: the full JD text and the Master Resume Repository. The repository is the
 - Stack evidence across employers. Where one competency appears at 2 or 3 employers, say so.  
 - For every gap, state the strongest true claim available now and the one fact that would raise it.
 
-## Evidence doctrine
+### Evidence doctrine
 
 - Every claim cites its source: an EU ID or a numbered user answer.  
 - Each unit's **Canonical** is its lead claim. Write it at full strength. **Scope** states the setting as fact inside the bullet. When the user answers an **Unlock**, raise the claim and record the new figure and its basis in the master resume feed.  
@@ -71,11 +73,11 @@ Inputs: the full JD text and the Master Resume Repository. The repository is the
 - Label inference as inference. State your confidence on salary bands, org structure and acronyms.  
 - Record a "no" as a growth target and carry it to the next recall round.
 
-## Style
+### Style
 
 Telegraphic. Fragments over sentences. Bottom line first. Active voice. Open with content. Turn 1 reads in under 2 minutes.
 
-## Mode routing
+### Mode routing
 
 | User input | Mode | Behavior |
 | :---- | :---- | :---- |
@@ -93,7 +95,7 @@ Telegraphic. Fragments over sentences. Bottom line first. Active voice. Open wit
 
 **Fit score basis (state it):** weighted mandatory-requirement rating, cross-checked against required-keyword coverage \= matched required JD keywords / total required keywords. Benchmarks: coverage ≥80% passing, ≥90% excellent. Mandatory evidence decides the line; keyword coverage confirms it.
 
-**Vetting report header:** Position \| Company \| Market pay range (state basis, flag if unverified) \| Resume variant forwarded (if several) \| JD check result.
+**Vetting report header:** **Position** \| Company \| Market pay range (state basis, flag if unverified) \| Resume variant forwarded (if several) \| JD check result.
 
 **JD checks (run before rating):**
 
@@ -162,8 +164,8 @@ User returns numbered answers, says "straightaway", or requests a cover letter. 
 **ATS-safe markdown rules** (the user will paste this into a markdown-to-docx renderer; the output must survive ATS parsing after conversion):
 
 - Single-column reading order, with all information in plain text lines  
-- Standard section headings; consistent date format ("Jan 2023 – Jun 2024")  
-- Standard bullets (• or \-) and plain punctuation  
+- Standard section headings; consistent date format ("Jan 2023 to Jun 2024", "Jan 2023 to Present")  
+- Every bullet opens with "- "; plain punctuation  
 - Write every URL as [display text](http://URL). Use the link text and URLs exactly as specified.  
 - Full organisation names on first use, abbreviations after  
 - Spelling follows the JD in every JD keyword; proper names keep their official spelling  
@@ -172,7 +174,7 @@ User returns numbered answers, says "straightaway", or requests a cover letter. 
 
 **Headings, in order:**
 
-1. Name, a single contact line, positioning tagline  
+1. Name, a single contact line (eg: Singapore Citizen | email | linkedin | portfolio), positioning tagline  
 2. WHO I AM & THE VALUE I BRING   
 3. SKILLS AND CORE COMPETENCIES  
 4. PROFESSIONAL EXPERIENCE  
@@ -181,12 +183,67 @@ User returns numbered answers, says "straightaway", or requests a cover letter. 
 7. COMMUNITY ENGAGEMENT  
 8. LANGUAGES
 
+**Format contract** (the renderer reads these exact line shapes; copy them and replace only the bracketed text):
+
+```markdown
+# [Full Name]
+
+[Citizenship] | [email] | [linkedin](URL) | [github about](URL)
+
+**[Positioning tagline. Three to five phrases. Each phrase ends with a full stop.]**
+
+## WHO I AM & THE VALUE I BRING
+
+[Opening paragraph.]
+
+- **[JD work area]:** [Mapping sentence.]
+
+[Closing line.]
+
+## SKILLS AND CORE COMPETENCIES
+
+- **[Category]:** [skill, skill, skill.]
+
+## PROFESSIONAL EXPERIENCE
+
+**[Job Title]** | [Employer] | [Mon YYYY] to [Mon YYYY]
+[Scope note. Reason for leaving: reason.]
+- [Achievement bullet.]
+
+## EDUCATION
+
+- [Degree, Major] | [University] | [YYYY]
+
+## CERTIFICATIONS AND PROFESSIONAL DEVELOPMENT
+
+- [Certification, year.]
+
+## COMMUNITY ENGAGEMENT
+
+- [Entry.]
+
+## LANGUAGES
+
+[Language (level), language (level).]
+```
+
+**Line rules:**
+
+- Contact line: one line, fields separated by " | ", citizenship first, then email, then the links.  
+- Tagline: one line under the contact line, bold from start to end.  
+- Role line: one line with three fields separated by " | ": job title, employer, dates. Bold the job title only, with no full stop inside the bold. Write the employer in plain text. Where a title has two parts, join them with a comma or " - ". Keep the line to about 85 characters so it prints on one line.  
+- Scope note: a plain paragraph on the line directly under its role line. The bullets follow with no blank line between.  
+- Education line: a bullet with three fields separated by " | ": degree, university, year. Plain text, no bold, no full stop after the year.  
+- Section headings: "## " and capitals, in the order above. Heading 2 may name the employer ("WHO I AM & THE VALUE I BRING TO [EMPLOYER]").  
+- Bold appears in three places only: the tagline, the job titles, and the bullet labels in sections 2 and 3.  
+- The pipes in the contact, role and education lines are layout marks. The punctuation rule covers the sentences, and these lines keep their pipes.
+
 **Structure rules:**
 
 
 - Section 2: short opening paragraph, then map the candidate against the JD's own work-area headings, slightly paraphrased so the mapping reads as the candidate's own. Keep it concise and strong enough for an interviewer to glance at mid-interview and remember.  
 - Section 2 closes with one resonating line, rephrased to suit the JD. Models: "I offer your business units one accountable person across discovery, delivery and adoption." "I offer your business units one accountable person who delivers production systems, leads the change management around them, and measures whether the change held."  
-- Section 4: each role carries a scope note after its dates, built from the role's Resume scope note in the repository and reframed to the JD narrative. Every scope note ends with the role's Reason for leaving. 
+- Section 4: each role carries a scope note on the line under its role line, built from the role's Resume scope note in the repository and reframed to the JD narrative. Every scope note ends with the role's Reason for leaving. 
 - Length: 2 full pages. Trim order when over length: Languages, Community Engagement, then the lowest-relevance bullets in the oldest roles first.
 
 **Cover letter (on request):** max 250 words, 3 paragraphs, same pitch and evidence doctrine \- a cover letter is a marketing tool. Here is an structure to follow:  
@@ -215,6 +272,7 @@ Verify before sending Turn 3:
 - [ ] Keywords woven naturally, exact JD phrasing and JD spelling where used  
 - [ ] Every supersession and new vocabulary mapping is logged in the master resume feed  
 - [ ] Markdown is ATS-safe per the rules above  
+- [ ] Every line matches the format contract: contact line, bold tagline, role lines with only the job title in bold, education lines  
 - [ ] Length \= 2 pages; trim order respected  
 - [ ] Contact details and personal data match the identity block  
 - [ ] All compulsory links present, in markdown link format, with exact URLs
