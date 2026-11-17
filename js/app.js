@@ -40,12 +40,13 @@
     flow:     document.getElementById('flow'),
     vSplit:   document.getElementById('view-split'),
     vWriter:  document.getElementById('view-writer'),
+    short:    document.getElementById('short'),
     bar:      document.getElementById('bar')
   };
 
   var model = null;         // { header, sections }
   var prefs = { role: '', filename: '', filenameEdited: false, md: '',
-                view: 'split' };
+                view: 'split', short: false };
   var timer = null;
   var prompting = false;
 
@@ -59,6 +60,7 @@
       prefs.filenameEdited = !!saved.filenameEdited;
       prefs.md = typeof saved.md === 'string' ? saved.md : '';
       prefs.view = saved.view === 'writer' ? 'writer' : 'split';
+      prefs.short = !!saved.short;
     } catch (e) { /* private window, cleared storage: defaults are fine */ }
   }
 
@@ -257,6 +259,70 @@
     }
     el.pages.textContent = '~' + count + (count === 1 ? ' page' : ' pages');
     el.pages.title = 'Estimated. A browser and Word break lines differently.';
+    markShort();
+  }
+
+  /* ---------------------------------------------------------- short lines
+   * A block whose last line holds a word or three costs a whole line of
+   * height for almost nothing. Each one is marked with roughly how many
+   * characters to cut to pull that line back up. The breaks are the
+   * browser's; Word's fall close to them, not exactly on them. */
+
+  var SHORT_RATIO = 0.25;         // last line under a quarter of the column
+
+  function rowsOf(p) {
+    var rows = [], walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT, null), t;
+    while ((t = walker.nextNode())) {
+      if (!t.nodeValue.trim()) continue;
+      var r = document.createRange();
+      r.selectNodeContents(t);
+      var rects = r.getClientRects();
+      for (var i = 0; i < rects.length; i++) {
+        var b = rects[i];
+        if (b.width < 1) continue;
+        var row = null;
+        for (var j = 0; j < rows.length; j++) {
+          if (Math.abs(rows[j].top - b.top) < b.height / 2) { row = rows[j]; break; }
+        }
+        if (!row) rows.push(row = { top: b.top, left: b.left, right: b.right });
+        row.left = Math.min(row.left, b.left);
+        row.right = Math.max(row.right, b.right);
+      }
+    }
+    return rows.sort(function (a, b) { return a.top - b.top; });
+  }
+
+  function markShort() {
+    var count = 0, nodes = el.sheet.querySelectorAll('p[data-line]');
+    for (var i = 0; i < nodes.length; i++) {
+      var p = nodes[i];
+      p.classList.remove('short');
+      p.removeAttribute('data-cut');
+      /* One-line layouts (roles, degrees) and headings are not prose. */
+      if (/\br-(role|edu|name|section|contact)\b/.test(p.className)) continue;
+      var rows = rowsOf(p);
+      if (rows.length < 2) continue;
+      var box = p.getBoundingClientRect();
+      var scale = p.offsetWidth ? box.width / p.offsetWidth : 1;
+      var cs = getComputedStyle(p);
+      var full = (p.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)) * scale;
+      var last = rows[rows.length - 1];
+      var ratio = full > 0 ? (last.right - last.left) / full : 1;
+      if (ratio >= SHORT_RATIO) continue;
+      var len = p.textContent.replace(/\s+/g, ' ').trim().length;
+      var perLine = len / (rows.length - 1 + ratio);
+      p.classList.add('short');
+      p.setAttribute('data-cut', 'cut ~' + Math.ceil(ratio * perLine + 1));
+      count++;
+    }
+    el.short.textContent = count ? 'Short lines ' + count : 'Short lines';
+  }
+
+  function setShort(on) {
+    prefs.short = !!on;
+    document.body.classList.toggle('short-on', prefs.short);
+    el.short.setAttribute('aria-pressed', String(prefs.short));
+    savePrefs();
   }
 
   /* ------------------------------------------------------------ highlight
@@ -753,6 +819,7 @@
 
   el.vSplit.addEventListener('click', function () { setView('split'); });
   el.vWriter.addEventListener('click', function () { setView('writer'); });
+  el.short.addEventListener('click', function () { setShort(!prefs.short); });
 
   /* Format buttons must not take focus, or the selection they act on is gone. */
   el.bar.addEventListener('mousedown', function (e) {
@@ -812,6 +879,7 @@
   syncFilename();
   if (prefs.filenameEdited && prefs.filename) el.filename.value = prefs.filename;
   setView(prefs.view);
+  setShort(prefs.short);
 
   if (!window.docx) {
     setStatus('The docx library did not load, so download is unavailable. ' +

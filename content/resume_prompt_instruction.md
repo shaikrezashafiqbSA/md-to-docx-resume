@@ -154,7 +154,7 @@ User returns numbered answers, says "straightaway", or requests a cover letter. 
 - [ ] At least 1 high impact, quantified result (user-sourced), and the largest verified number in the unit leads  
 - [ ] Starting state shown where the unit has one  
 - [ ] Covers ≥3 of 4 STAR elements (Situation, Task, Action, Result)  
-- [ ] Max 3 lines  
+- [ ] Max 3 lines, and no last line holding only one to three words (see the line budget)  
 - [ ] Weaves in the JD keywords identified in Turn 1, in exact JD phrasing and spelling where true ("data analysis" where the JD says "data analysis", "program" where the JD writes "program"), in natural sentences
 
 **Ordering:** lead with the highest-weighted JD requirements. Foreground decision and outcome; place tooling after, where technical depth risks miscategorisation. Write shape matches so structure is visible to a human reader.
@@ -224,7 +224,7 @@ User returns numbered answers, says "straightaway", or requests a cover letter. 
 
 ## LANGUAGES
 
-[Language (level), language (level).]
+[Language, language (level), language (level).]
 ```
 
 **Line rules:**
@@ -235,6 +235,8 @@ User returns numbered answers, says "straightaway", or requests a cover letter. 
 - Scope note: a plain paragraph on the line directly under its role line. The bullets follow with no blank line between.  
 - Education line: a bullet with three fields separated by " | ": degree, university, year. Plain text, no bold, no full stop after the year.  
 - Certification line: a bullet with fields separated by " | ": certification, then issuer or status where there is one, then the year (or month and year for a booked exam). Plain text, no bold, no full stop after the date. A certification with no date stays a plain bullet.  
+- Languages line: one plain line. Group languages that share a level and write the level once, after the last of them: "English, Malay (fluent), Arabic (conversational and written), Hindi and Urdu, Chinese (conversational)."  
+- Line budget: a printed bullet line holds about 100 characters, and a scope note or paragraph line about 120. Every line that wraps costs a full line of height. Write each bullet to land just under 100, 200 or 300 characters. Where a bullet runs one to three words onto a new line, cut words until it fits the line above. Section 2 bullets and skills lines follow the same budget.  
 - Section headings: "## " and capitals, in the order above. Heading 2 may name the employer ("WHO I AM & THE VALUE I BRING TO [EMPLOYER]").  
 - Bold appears in three places only: the tagline, the job titles, and the bullet labels in sections 2 and 3.  
 - The pipes in the contact, role, education and certification lines are layout marks. The punctuation rule covers the sentences, and these lines keep their pipes.

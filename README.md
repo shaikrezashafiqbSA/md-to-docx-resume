@@ -54,9 +54,13 @@ from.
    In Split the two columns follow each other: click text on the sheet and its
    Markdown line scrolls into view under a yellow band; put the caret in the
    Markdown and its block is marked on the sheet.
-4. Optionally type a **target role**. It only shapes the file name, which
+4. **Short lines** marks every paragraph whose last line holds only a word or
+   three, with roughly how many characters to cut in the right margin. Each
+   one fixed saves a line. The count on the button is how many there are.
+   Line breaks are the browser's, so treat it as close to Word, not exact.
+5. Optionally type a **target role**. It only shapes the file name, which
    defaults to `Shaik_Reza_Shafiq_Resume_<role>.docx`.
-5. Press **Download .docx**.
+6. Press **Download .docx**.
 
 Your draft, view, role and file name are kept in this browser's local storage.
 **Sample** replaces the text with `content/mock-resume.md`.
